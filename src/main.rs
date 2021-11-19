@@ -42,7 +42,7 @@ async fn flou_moyen(content_type: &ContentType, data: Data<'_>) -> Result<NamedF
     if let None = path {
         return Err(NotFound(String::from("Could not save file")));
     }
-    let path = filter::flou_moyen(path.unwrap());
+    let path = filter::flou_moyen(path.unwrap(), 2);
     //let path = Path::new("static/").join(file);
     NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
     //status
