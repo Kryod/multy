@@ -1,18 +1,18 @@
 use std::path::PathBuf;
 use image::{GenericImageView, Pixel};
 
-pub fn flou_moyen(path: PathBuf, radius: u32) -> PathBuf {
+pub fn get_new_image_file(path: &PathBuf, file_name_add: &str) -> PathBuf {
     let file_stem = path.file_stem().unwrap();
-    let flou_moyen = "_flou_moyen.";
+    //let flou_moyen = "_flou_moyen.";
     let extension = path.extension().unwrap();
 
     // prevent string realloc
     let mut new_path = String::with_capacity(
-        file_stem.len() + flou_moyen.len() + extension.len()
+        file_stem.len() + file_name_add.len() + extension.len()
     );
 
     new_path.push_str(file_stem.to_str().unwrap());
-    new_path.push_str(flou_moyen);
+    new_path.push_str(file_name_add);
     new_path.push_str(extension.to_str().unwrap());
 
     let base_path = "images";
@@ -22,6 +22,12 @@ pub fn flou_moyen(path: PathBuf, radius: u32) -> PathBuf {
 
     to_save.push(base_path);
     to_save.push(new_path);
+
+    to_save
+}
+
+pub fn flou_moyen(path: PathBuf, radius: u32) -> PathBuf {
+    let to_save = get_new_image_file(&path, "_flou_moyen.");
 
     let img = image::open(path).unwrap();
 
@@ -93,11 +99,7 @@ pub fn flou_moyen(path: PathBuf, radius: u32) -> PathBuf {
 
 pub fn erosion(path: PathBuf) -> PathBuf {
 
-    let mut to_save = PathBuf::from("images");
-    let new_path = path.file_stem().unwrap().to_str().unwrap().to_owned() 
-    + &"_erosion." 
-    + path.extension().unwrap().to_str().unwrap();
-    to_save.push(new_path);
+    let to_save = get_new_image_file(&path, "_erosion.");
     let img = image::open(path).unwrap();
     let mut buffer = image::ImageBuffer::new(img.width(), img.height());
 
@@ -155,7 +157,11 @@ mod tests {
 
     #[test]
     fn test_erosion() {
+        let start = std::time::Instant::now();
         super::erosion(PathBuf::from("images/lena.jpg"));
+
+        let elapsed = start.elapsed().as_millis();
+        println!("erosion: {} ms", elapsed);
     }   
 
 }
