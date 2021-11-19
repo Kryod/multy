@@ -1,10 +1,63 @@
-use std::path::PathBuf;
-use image::{GenericImageView, Pixel};
+use std::{error::Error, ffi::OsStr, fmt::Display, path::PathBuf};
+use image::{GenericImageView, ImageError, Pixel};
 
-pub fn get_new_image_file(path: &PathBuf, file_name_add: &str) -> PathBuf {
-    let file_stem = path.file_stem().unwrap();
-    //let flou_moyen = "_flou_moyen.";
-    let extension = path.extension().unwrap();
+#[derive(Debug)]
+pub enum FilterError {
+    DestImgError(String),
+    ImageError(String),
+    OtherError(String)
+}
+
+impl FilterError {
+    pub fn get_error_string(&self) -> String {
+        match self {
+            FilterError::DestImgError(s) => s.clone(),
+            FilterError::ImageError(s) => s.clone(),
+            FilterError::OtherError(s) => s.clone(),
+        }
+    }
+}
+
+impl From<ImageError> for FilterError {
+    fn from(err: ImageError) -> Self {
+        match err {
+            ImageError::Decoding(e) => FilterError::ImageError(e.to_string()),
+            ImageError::Encoding(e) => FilterError::ImageError(e.to_string()),
+            ImageError::Parameter(e) => FilterError::ImageError(e.to_string()),
+            ImageError::Limits(e) => FilterError::ImageError(e.to_string()),
+            ImageError::Unsupported(e) => FilterError::ImageError(e.to_string()),
+            ImageError::IoError(e) => FilterError::ImageError(e.to_string()),
+        }
+
+    }
+}
+
+impl Display for FilterError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Error for FilterError {}
+
+pub fn orig_filename_extension(path: &PathBuf) -> Result<(&OsStr, &OsStr), FilterError> {
+    let file_stem = path.file_stem();
+    let extension = path.extension();
+
+    if let None = file_stem {
+        return Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have a filename", path)))
+    }
+    if let None = extension {
+        return Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have an extension", path)))
+    }
+
+    Ok((file_stem.unwrap(), extension.unwrap()))
+}
+
+pub fn get_new_image_file(path: &PathBuf, file_name_add: &str) -> Result<PathBuf, FilterError> {
+
+    let (file_stem, extension) = orig_filename_extension(&path)?;
+
 
     // prevent string realloc
     let mut new_path = String::with_capacity(
@@ -23,11 +76,11 @@ pub fn get_new_image_file(path: &PathBuf, file_name_add: &str) -> PathBuf {
     to_save.push(base_path);
     to_save.push(new_path);
 
-    to_save
+    Ok(to_save)
 }
 
-pub fn flou_moyen(path: PathBuf, radius: u32) -> PathBuf {
-    let to_save = get_new_image_file(&path, "_flou_moyen.");
+pub fn flou_moyen(path: PathBuf, radius: u32) -> Result<PathBuf, FilterError> {
+    let to_save = get_new_image_file(&path, "_flou_moyen.")?;
 
     let img = image::open(path).unwrap();
 
@@ -94,12 +147,12 @@ pub fn flou_moyen(path: PathBuf, radius: u32) -> PathBuf {
     }
 
     buffer.save(&to_save).unwrap();
-    to_save
+    Ok(to_save)
 }
 
-pub fn erosion(path: PathBuf) -> PathBuf {
+pub fn erosion(path: PathBuf) -> Result<PathBuf, FilterError> {
 
-    let to_save = get_new_image_file(&path, "_erosion.");
+    let to_save = get_new_image_file(&path, "_erosion.")?;
     let img = image::open(path).unwrap();
     let mut buffer = image::ImageBuffer::new(img.width(), img.height());
 
@@ -138,30 +191,32 @@ pub fn erosion(path: PathBuf) -> PathBuf {
     println!("{:?}", &to_save);
     buffer.save(&to_save).unwrap();
 
-    to_save
+    Ok(to_save)
 }
 
 #[cfg(test)]
 mod tests {
 
-    use std::path::PathBuf;
+    use std::{error::Error, path::PathBuf};
 
     #[test]
-    fn test_flou_moyen() {
+    fn test_flou_moyen() -> Result<(), Box<dyn Error>> {
         let start = std::time::Instant::now();
-        super::flou_moyen(PathBuf::from("images/lena.jpg"), 2);
+        super::flou_moyen(PathBuf::from("images/lena.jpg"), 2)?;
 
         let elapsed = start.elapsed().as_millis();
         println!("flou_moyen: {} ms", elapsed);
+        Ok(())
     }
 
     #[test]
-    fn test_erosion() {
+    fn test_erosion() -> Result<(), Box<dyn Error>>{
         let start = std::time::Instant::now();
-        super::erosion(PathBuf::from("images/lena.jpg"));
+        super::erosion(PathBuf::from("images/lena.jpg"))?;
 
         let elapsed = start.elapsed().as_millis();
         println!("erosion: {} ms", elapsed);
+        Ok(())
     }   
 
 }

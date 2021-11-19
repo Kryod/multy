@@ -43,9 +43,11 @@ async fn flou_moyen(content_type: &ContentType, data: Data<'_>) -> Result<NamedF
         return Err(NotFound(String::from("Could not save file")));
     }
     let path = filter::flou_moyen(path.unwrap(), 2);
-    //let path = Path::new("static/").join(file);
-    NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
-    //status
+    if let Err(e) = path {
+        return Err(NotFound(e.get_error_string()));
+    }
+
+    NamedFile::open(&path.unwrap()).await.map_err(|e| NotFound(e.to_string()))
 }
 
 #[rocket::main]
