@@ -3,3 +3,6 @@
 
 .idea/*
 Cargo.lock
+
+images/*erosion*
+images/*flou_moyen*

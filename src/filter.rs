@@ -1,4 +1,4 @@
-use image::{DynamicImage, GenericImageView, ImageError, ImageBuffer, Rgba};
+use image::{DynamicImage, GenericImageView, ImageBuffer, ImageError, Rgba};
 use std::{error::Error, ffi::OsStr, fmt::Display, path::PathBuf};
 
 use crate::Algorithms;
@@ -41,6 +41,25 @@ impl Display for FilterError {
 
 impl Error for FilterError {}
 
+pub fn run_algo(path: PathBuf, algo: Algorithms, alg_name: String) -> Result<PathBuf, FilterError> {
+    let mut fname = String::with_capacity(alg_name.len() + 2);
+    fname.push('_');
+    fname.push_str(&alg_name);
+    fname.push('.');
+
+    let dest = get_new_image_file(&path, &fname)?;
+    let img = image::open(path).unwrap();
+    let radius = 2;
+
+    let buffer = match algo {
+        Algorithms::FlouMoyen => flou_moyen(&img, radius),
+        Algorithms::Erosion => erosion(&img, radius),
+    };
+
+    buffer.save(&dest).unwrap();
+    Ok(dest)
+}
+
 pub fn orig_filename_extension(path: &PathBuf) -> Result<(&OsStr, &OsStr), FilterError> {
     let file_stem = path.file_stem();
     let extension = path.extension();
@@ -53,9 +72,8 @@ pub fn orig_filename_extension(path: &PathBuf) -> Result<(&OsStr, &OsStr), Filte
     }
 }
 
-pub fn flou_moyen(img: DynamicImage, radius: u32) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-
-    let buffer = compute_buffer(img, radius, [0; 4],
+pub fn flou_moyen(img: &DynamicImage, radius: u32) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+    let buffer = compute_buffer(&img, radius, [0; 4],
         |pix, sum| {
             sum[0] += pix[0] as u32;
             sum[1] += pix[1] as u32;
@@ -79,30 +97,9 @@ pub fn flou_moyen(img: DynamicImage, radius: u32) -> ImageBuffer<Rgba<u8>, Vec<u
     buffer
 }
 
-pub fn run_algo(path: PathBuf, algo: Algorithms, alg_name: String) -> Result<PathBuf, FilterError> {
-    let mut fname = String::new();
-    fname.push('_');
-    fname.push_str(&alg_name);
-    fname.push('.');
+pub fn erosion(img: &DynamicImage, radius: u32) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
 
-    let dest = get_new_image_file(&path, &fname)?;
-    let img = image::open(path).unwrap();
-    let radius = 2;
-
-
-
-    let buffer = match algo {
-        Algorithms::FlouMoyen => flou_moyen(img, radius),
-        Algorithms::Erosion => erosion(img, radius),
-    };
-
-    buffer.save(&dest).unwrap();
-    Ok(dest)
-}
-
-pub fn erosion(img: DynamicImage, radius: u32) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-
-    let buffer = compute_buffer(img, radius, [u8::MAX; 4],
+    let buffer = compute_buffer(&img, radius, [u8::MAX; 4],
         |pix, min| {
             if min[0] > pix[0] { min[0] = pix[0] }
             if min[1] > pix[1] { min[1] = pix[1] }
@@ -146,7 +143,7 @@ pub fn get_new_image_file(path: &PathBuf, file_name_add: &str) -> Result<PathBuf
 }
 
 fn compute_buffer<T>(
-    img: DynamicImage,
+    img: &DynamicImage,
     radius: u32,
     accumulator: [T; 4],
     reduce: fn(&[u8; 4], &mut [T; 4]),
@@ -211,25 +208,76 @@ fn compute_buffer<T>(
 
 #[cfg(test)]
 mod tests {
+    extern crate test;
+    use test::Bencher;
+
     use std::{error::Error, path::PathBuf};
+    use crate::filter::{
+        get_new_image_file, flou_moyen, erosion
+    };
+
+    const RADIUS: u32 = 256;
+    const IMG: &str = "images/lena_1960.jpg";
 
     #[test]
     fn test_flou_moyen() -> Result<(), Box<dyn Error>> {
-        let start = std::time::Instant::now();
-        //super::flou_moyen(PathBuf::from("images/lena.jpg"), 2)?;
+        let path = PathBuf::from(IMG);
+        let algo_name = "flou_moyen";
 
+        let mut fname = String::with_capacity(algo_name.len() + 2);
+        fname.push('_');
+        fname.push_str(&algo_name);
+        fname.push('.');
+
+        let dest = get_new_image_file(&path, &fname)?;
+        let img = image::open(path)?;
+
+        let start = std::time::Instant::now();
+        let buffer = flou_moyen(&img, RADIUS);
         let elapsed = start.elapsed().as_millis();
         println!("flou_moyen: {} ms", elapsed);
+
+        buffer.save(&dest)?;
+        Ok(())
+    }
+
+    #[bench]
+    fn bench_flou_moyen(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
+        let path = PathBuf::from(IMG);
+        let img = image::open(path)?;
+
+        b.iter(|| flou_moyen(&img, RADIUS));
         Ok(())
     }
 
     #[test]
     fn test_erosion() -> Result<(), Box<dyn Error>> {
-        let start = std::time::Instant::now();
-        //super::erosion(PathBuf::from("images/lena.jpg"))?;
+        let path = PathBuf::from(IMG);
+        let algo_name = "erosion";
 
+        let mut fname = String::with_capacity(algo_name.len() + 2);
+        fname.push('_');
+        fname.push_str(&algo_name);
+        fname.push('.');
+
+        let dest = get_new_image_file(&path, &fname)?;
+        let img = image::open(path)?;
+
+        let start = std::time::Instant::now();
+        let buffer = erosion(&img, RADIUS);
         let elapsed = start.elapsed().as_millis();
         println!("erosion: {} ms", elapsed);
+
+        buffer.save(&dest)?;
+        Ok(())
+    }
+
+    #[bench]
+    fn bench_erosion(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
+        let path = PathBuf::from(IMG);
+        let img = image::open(path)?;
+
+        b.iter(|| erosion(&img, RADIUS));
         Ok(())
     }
 }
