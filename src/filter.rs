@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use image::GenericImageView;
+use image::{GenericImageView, Pixel};
 
 pub fn flou_moyen(path: PathBuf, radius: u32) -> PathBuf {
     let file_stem = path.file_stem().unwrap();
@@ -91,11 +91,71 @@ pub fn flou_moyen(path: PathBuf, radius: u32) -> PathBuf {
     to_save
 }
 
-#[test]
-fn test_flou_moyen() {
-    let start = std::time::Instant::now();
-    flou_moyen(PathBuf::from("images/lena.jpg"), 2);
+pub fn erosion(path: PathBuf) -> PathBuf {
 
-    let elapsed = start.elapsed().as_millis();
-    println!("flou_moyen: {} ms", elapsed);
+    let mut to_save = PathBuf::from("images");
+    let new_path = path.file_stem().unwrap().to_str().unwrap().to_owned() 
+    + &"_erosion." 
+    + path.extension().unwrap().to_str().unwrap();
+    to_save.push(new_path);
+    let img = image::open(path).unwrap();
+    let mut buffer = image::ImageBuffer::new(img.width(), img.height());
+
+    let radius = 2;
+
+    let width = img.width();
+    let height = img.height();
+
+    for x in 0..width {
+        for y in 0..height {
+
+            let mut min = img.get_pixel(x, y).channels4();
+            for neighbour_x in (x.saturating_sub(radius))..(x.saturating_add(radius + 1)) {
+                for neighbour_y in (y.saturating_sub(radius))..(y.saturating_add(radius + 1)) {
+                    if !(neighbour_x >= width || neighbour_y >= height) {
+                        let p = img.get_pixel(neighbour_x, neighbour_y).channels4();
+                        if min.0 > p.0 {
+                            min.0 = p.0;
+                        }
+                        if min.1 > p.1 {
+                            min.1 = p.1;
+                        }
+                        if min.2 > p.2 {
+                            min.2 = p.2;
+                        }
+                        if min.3 > p.3 {
+                            min.3 = p.3;
+                        }
+                    }
+                }
+            }
+
+            buffer.put_pixel(x, y, image::Rgba([min.0, min.1, min.2, min.3]));
+        }
+    }
+    println!("{:?}", &to_save);
+    buffer.save(&to_save).unwrap();
+
+    to_save
+}
+
+#[cfg(test)]
+mod tests {
+
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_flou_moyen() {
+        let start = std::time::Instant::now();
+        super::flou_moyen(PathBuf::from("images/lena.jpg"), 2);
+
+        let elapsed = start.elapsed().as_millis();
+        println!("flou_moyen: {} ms", elapsed);
+    }
+
+    #[test]
+    fn test_erosion() {
+        super::erosion(PathBuf::from("images/lena.jpg"));
+    }   
+
 }
