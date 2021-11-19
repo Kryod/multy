@@ -8,7 +8,7 @@ pub mod filter;
 use std::error::Error;
 use std::path::{Path, PathBuf};
 use rocket::data::Data;
-use rocket::fs::NamedFile;
+use rocket::fs::{FileServer, NamedFile};
 use rocket::response::status;
 use rocket::response::status::NotFound;
 use rocket::http::ContentType;
@@ -51,7 +51,7 @@ async fn flou_moyen(content_type: &ContentType, data: Data<'_>) -> Result<NamedF
 #[rocket::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     rocket::build()
-    //.mount("/public", StaticFiles::from(Path::new("images")))
+    .mount("/public", FileServer::from("images"))
     .mount("/showimages", routes![files])
     .mount("/", routes![index, save, flou_moyen])
     .launch().await?;
