@@ -7,14 +7,13 @@ pub mod filter;
 
 use std::error::Error;
 use std::path::{Path, PathBuf};
-use filter::FilterError;
 use rocket::data::Data;
 use rocket::fs::{FileServer, NamedFile};
 use rocket::response::status;
 use rocket::response::status::NotFound;
 use rocket::http::ContentType;
 
-enum Algorithms {
+pub enum Algorithms {
     FlouMoyen,
     Erosion
 }
@@ -28,12 +27,12 @@ impl Algorithms {
         }
     }
 
-    pub fn apply(&self, path: PathBuf, radius: u32) -> Result<PathBuf, FilterError>{
+    /*pub fn apply(&self, path: PathBuf, radius: u32) -> Result<PathBuf, FilterError>{
         match self {
             Algorithms::FlouMoyen => filter::flou_moyen(path, radius),
             Algorithms::Erosion => filter::erosion(path),
         }
-    }
+    }*/
 }
 
 #[get("/<file..>")]
@@ -61,13 +60,14 @@ async fn flou_moyen(content_type: &ContentType, data: Data<'_>) -> Result<NamedF
 
     let (_, path, algo) = utils::save_image(multipart_form_data);
 
+    let algo_name = algo.clone();
     let algo = Algorithms::get_algo(&algo);
 
     if let None = path {
         return Err(NotFound(String::from("Could not save file")));
     }
     //let path = filter::flou_moyen(path.unwrap(), 2);
-    let path = algo.apply(path.unwrap(), 2);
+    let path = filter::run_algo(path.unwrap(), algo, algo_name);
     if let Err(e) = path {
         return Err(NotFound(e.get_error_string()));
     }

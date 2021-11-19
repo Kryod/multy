@@ -80,7 +80,7 @@ pub fn flou_moyen(img: DynamicImage, radius: u32) -> ImageBuffer<Rgba<u8>, Vec<u
 }
 
 pub fn run_algo(path: PathBuf, algo: Algorithms, alg_name: String) -> Result<PathBuf, FilterError> {
-    let fname = String::new();
+    let mut fname = String::new();
     fname.push('_');
     fname.push_str(&alg_name);
     fname.push('.');
@@ -94,7 +94,7 @@ pub fn run_algo(path: PathBuf, algo: Algorithms, alg_name: String) -> Result<Pat
     let buffer = match algo {
         Algorithms::FlouMoyen => flou_moyen(img, radius),
         Algorithms::Erosion => erosion(img, radius),
-    }
+    };
 
     buffer.save(&dest).unwrap();
     Ok(dest)
