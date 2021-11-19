@@ -1,11 +1,11 @@
+use image::{DynamicImage, GenericImageView, ImageError, ImageBuffer, Rgba};
 use std::{error::Error, ffi::OsStr, fmt::Display, path::PathBuf};
-use image::{DynamicImage, GenericImageView, ImageError};
 
 #[derive(Debug)]
 pub enum FilterError {
     DestImgError(String),
     ImageError(String),
-    OtherError(String)
+    OtherError(String),
 }
 
 impl FilterError {
@@ -28,7 +28,6 @@ impl From<ImageError> for FilterError {
             ImageError::Unsupported(e) => FilterError::ImageError(e.to_string()),
             ImageError::IoError(e) => FilterError::ImageError(e.to_string()),
         }
-
     }
 }
 
@@ -44,21 +43,19 @@ pub fn orig_filename_extension(path: &PathBuf) -> Result<(&OsStr, &OsStr), Filte
     let file_stem = path.file_stem();
     let extension = path.extension();
 
-    if let None = file_stem {
-        return Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have a filename", path)))
+    match (file_stem, extension) {
+        (Some(file_stem), Some(extension)) => Ok((file_stem, extension)),
+        (None, Some(_)) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have a filename", path))),
+        (Some(_), None) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have an extension", path))),
+        (None, None) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have any filename or extension", path))),
     }
-    if let None = extension {
-        return Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have an extension", path)))
-    }
-
-    Ok((file_stem.unwrap(), extension.unwrap()))
 }
 
 pub fn flou_moyen(path: PathBuf, radius: u32) -> Result<PathBuf, FilterError> {
     let dest = get_new_image_file(&path, "_flou_moyen.")?;
     let img = image::open(path).unwrap();
 
-    compute_and_save_buffer(img, radius, &dest, [0; 4],
+    let buffer = compute_buffer(img, radius, [0; 4],
         |pix, sum| {
             sum[0] += pix[0] as u32;
             sum[1] += pix[1] as u32;
@@ -79,6 +76,7 @@ pub fn flou_moyen(path: PathBuf, radius: u32) -> Result<PathBuf, FilterError> {
         ],
     );
 
+    buffer.save(&dest).unwrap();
     Ok(dest)
 }
 
@@ -87,12 +85,12 @@ pub fn erosion(path: PathBuf) -> Result<PathBuf, FilterError> {
     let img = image::open(path).unwrap();
     let radius = 2;
 
-    compute_and_save_buffer(img, radius, &dest, [u32::MAX; 4],
+    let buffer = compute_buffer(img, radius, [u8::MAX; 4],
         |pix, min| {
-            if min[0] > pix[0] as u32 { min[0] = pix[0] as u32 }
-            if min[1] > pix[1] as u32 { min[1] = pix[1] as u32 }
-            if min[2] > pix[2] as u32 { min[2] = pix[2] as u32 }
-            if min[3] > pix[3] as u32 { min[3] = pix[3] as u32 }
+            if min[0] > pix[0] { min[0] = pix[0] }
+            if min[1] > pix[1] { min[1] = pix[1] }
+            if min[2] > pix[2] { min[2] = pix[2] }
+            if min[3] > pix[3] { min[3] = pix[3] }
         },
         |col, min| {
             if min[0] > col[0] { min[0] = col[0] }
@@ -108,16 +106,15 @@ pub fn erosion(path: PathBuf) -> Result<PathBuf, FilterError> {
         ]
     );
 
+    buffer.save(&dest).unwrap();
     Ok(dest)
 }
 
 pub fn get_new_image_file(path: &PathBuf, file_name_add: &str) -> Result<PathBuf, FilterError> {
-
     let (file_stem, extension) = orig_filename_extension(&path)?;
 
     // prevent string realloc
-    let mut new_path =
-        String::with_capacity(file_stem.len() + file_name_add.len() + extension.len());
+    let mut new_path = String::with_capacity(file_stem.len() + file_name_add.len() + extension.len());
 
     new_path.push_str(file_stem.to_str().unwrap());
     new_path.push_str(file_name_add);
@@ -132,15 +129,14 @@ pub fn get_new_image_file(path: &PathBuf, file_name_add: &str) -> Result<PathBuf
     Ok(to_save)
 }
 
-fn compute_and_save_buffer(
+fn compute_buffer<T>(
     img: DynamicImage,
     radius: u32,
-    dest: &PathBuf,
-    accumulator: [u32; 4],
-    reduce: fn(&[u8; 4], &mut [u32; 4]),
-    concat: fn(&[u32; 4], &mut [u32; 4]),
-    average: fn([u32; 4], u32) -> [u8; 4],
-) {
+    accumulator: [T; 4],
+    reduce: fn(&[u8; 4], &mut [T; 4]),
+    concat: fn(&[T; 4], &mut [T; 4]),
+    average: fn([T; 4], u32) -> [u8; 4],
+) -> ImageBuffer<Rgba<u8>, Vec<u8>> where T: Copy {
     let width = img.width();
     let height = img.height();
     let mut buffer = image::ImageBuffer::new(width, height);
@@ -194,12 +190,11 @@ fn compute_and_save_buffer(
         }
     }
 
-    buffer.save(dest).unwrap();
+    buffer
 }
 
 #[cfg(test)]
 mod tests {
-
     use std::{error::Error, path::PathBuf};
 
     #[test]
@@ -213,12 +208,12 @@ mod tests {
     }
 
     #[test]
-    fn test_erosion() -> Result<(), Box<dyn Error>>{
+    fn test_erosion() -> Result<(), Box<dyn Error>> {
         let start = std::time::Instant::now();
         super::erosion(PathBuf::from("images/lena.jpg"))?;
 
         let elapsed = start.elapsed().as_millis();
         println!("erosion: {} ms", elapsed);
         Ok(())
-    }   
+    }
 }
