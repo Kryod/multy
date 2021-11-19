@@ -5,19 +5,19 @@
 pub mod utils;
 pub mod filter;
 
-use std::path::*;
+use std::error::Error;
+use std::path::{Path, PathBuf};
 use rocket::data::Data;
+use rocket::fs::NamedFile;
 use rocket::response::status;
-use rocket_contrib::serve::StaticFiles;
-use rocket::response::NamedFile;
 use rocket::response::status::NotFound;
 use rocket::http::ContentType;
 
 
 #[get("/<file..>")]
-fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
+async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
     let path = Path::new("images/").join(file);
-    NamedFile::open(&path).map_err(|_| NotFound(format!("Bad path: {:?}", path)))
+    NamedFile::open(&path).await.map_err(|_| NotFound(format!("Bad path: {:?}", path)))
 }
 
 #[get("/")]
@@ -26,26 +26,35 @@ fn index() -> &'static str {
 }
 
 #[post("/save", data = "<data>")]
-fn save(content_type: &ContentType, data: Data) -> status::Accepted<String> {
-    let multipart_form_data = utils::get_multipart_form_data(content_type, data);
+async fn save(content_type: &ContentType, data: Data<'_>) -> status::Accepted<String> {
+    let multipart_form_data = utils::get_multipart_form_data(content_type, data).await;
 
     let (status, _path) = utils::save_image(multipart_form_data);
     status
 }
 
 #[post("/floumoyen", data = "<data>")]
-fn flou_moyen(content_type: &ContentType, data: Data) -> status::Accepted<String> {
+async fn flou_moyen(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, NotFound<String>> {
     let multipart_form_data = utils::get_multipart_form_data(content_type, data);
 
-    let (status, _path) = utils::save_image(multipart_form_data);
+    let (_status, path) = utils::save_image(multipart_form_data.await);
 
-    filter::flou_moyen();
-    status
+    if let None = path {
+        return Err(NotFound(String::from("Could not save file")));
+    }
+    let path = filter::flou_moyen(path.unwrap());
+    //let path = Path::new("static/").join(file);
+    NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
+    //status
 }
 
-fn main() {
-    rocket::ignite()
-    .mount("/public", StaticFiles::from("images"))
+#[rocket::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    rocket::build()
+    //.mount("/public", StaticFiles::from(Path::new("images")))
     .mount("/showimages", routes![files])
-    .mount("/", routes![index, save, flou_moyen]).launch();
+    .mount("/", routes![index, save, flou_moyen])
+    .launch().await?;
+
+    Ok(())
 }
