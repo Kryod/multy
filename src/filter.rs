@@ -62,6 +62,7 @@ pub fn run_algo(path: PathBuf, algo: Algorithms, algo_name: String) -> Result<Pa
     let buffer = match algo {
         Algorithms::FlouMoyen => flou_moyen(&img, radius),
         Algorithms::Erosion => erosion(&img, radius),
+        Algorithms::Dilatation => dilatation(&img, radius),
     };
 
     buffer.save(&dest)?;
@@ -119,12 +120,27 @@ pub fn erosion(img: &DynamicImage, radius: u32) -> ImageBuffer<Rgba<u8>, Vec<u8>
             if min[2] > col[2] { min[2] = col[2] }
             if min[3] > col[3] { min[3] = col[3] }
         },
-        |min, _| [
-            min[0] as u8,
-            min[1] as u8,
-            min[2] as u8,
-            min[3] as u8,
-        ]
+        |min, _| min
+    );
+
+    buffer
+}
+
+pub fn dilatation(img: &DynamicImage, radius: u32) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+    let buffer = compute_buffer(&img, radius, [u8::MIN; 4],
+        |pix, max| {
+            if max[0] < pix[0] { max[0] = pix[0] }
+            if max[1] < pix[1] { max[1] = pix[1] }
+            if max[2] < pix[2] { max[2] = pix[2] }
+            if max[3] < pix[3] { max[3] = pix[3] }
+        },
+        |col, max| {
+            if max[0] < col[0] { max[0] = col[0] }
+            if max[1] < col[1] { max[1] = col[1] }
+            if max[2] < col[2] { max[2] = col[2] }
+            if max[3] < col[3] { max[3] = col[3] }
+        },
+        |max, _| max
     );
 
     buffer
@@ -224,10 +240,10 @@ mod tests {
 
     use std::{error::Error, path::PathBuf};
     use crate::filter::{
-        get_new_image_file, flou_moyen, erosion
+        get_new_image_file, flou_moyen, erosion, dilatation
     };
 
-    const RADIUS: u32 = 256;
+    const RADIUS: u32 = 2;
     const IMG: &str = "images/lena_1960.jpg";
 
     #[test]
@@ -289,6 +305,37 @@ mod tests {
         let img = image::open(path)?;
 
         b.iter(|| erosion(&img, RADIUS));
+        Ok(())
+    }
+
+    #[test]
+    fn test_dilatation() -> Result<(), Box<dyn Error>> {
+        let path = PathBuf::from(IMG);
+        let algo_name = "dilatation";
+
+        let mut fname = String::with_capacity(algo_name.len() + 2);
+        fname.push('_');
+        fname.push_str(&algo_name);
+        fname.push('.');
+
+        let dest = get_new_image_file(&path, &fname)?;
+        let img = image::open(path)?;
+
+        let start = std::time::Instant::now();
+        let buffer = dilatation(&img, RADIUS);
+        let elapsed = start.elapsed().as_millis();
+        println!("dilatation: {} ms", elapsed);
+
+        buffer.save(&dest)?;
+        Ok(())
+    }
+
+    #[bench]
+    fn bench_dilatation(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
+        let path = PathBuf::from(IMG);
+        let img = image::open(path)?;
+
+        b.iter(|| dilatation(&img, RADIUS));
         Ok(())
     }
 }

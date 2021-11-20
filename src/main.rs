@@ -17,22 +17,17 @@ use rocket::http::ContentType;
 pub enum Algorithms {
     FlouMoyen,
     Erosion,
+    Dilatation,
 }
 
 impl Algorithms {
     pub fn get_algo(s: &str) -> Self {
         match s {
             "erosion" => Self::Erosion,
+            "dilatation" => Self::Dilatation,
             "flou_moyen" | _ => Self::FlouMoyen,
         }
     }
-
-    /*pub fn apply(&self, path: PathBuf, radius: u32) -> Result<PathBuf, FilterError>{
-        match self {
-            Algorithms::FlouMoyen => filter::flou_moyen(path, radius),
-            Algorithms::Erosion => filter::erosion(path),
-        }
-    }*/
 }
 
 #[get("/<file..>")]
@@ -53,8 +48,8 @@ async fn save(content_type: &ContentType, data: Data<'_>) -> status::Accepted<St
     status
 }
 
-#[post("/floumoyen", data = "<data>")]
-async fn flou_moyen(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, NotFound<String>> {
+#[post("/apply", data = "<data>")]
+async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, NotFound<String>> {
     let multipart_form_data = utils::get_multipart_form_data(content_type, data).await;
     let (_, path, algo_name) = utils::save_image(multipart_form_data);
     let algo = Algorithms::get_algo(&algo_name);
@@ -73,7 +68,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     rocket::build()
         .mount("/public", FileServer::from("images"))
         .mount("/showimages", routes![files])
-        .mount("/", routes![index, save, flou_moyen])
+        .mount("/", routes![index, save, apply])
         .launch()
         .await?;
 
