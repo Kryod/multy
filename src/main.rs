@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro, test)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 pub mod utils;
 pub mod filter;
@@ -15,15 +16,14 @@ use rocket::http::ContentType;
 
 pub enum Algorithms {
     FlouMoyen,
-    Erosion
+    Erosion,
 }
 
 impl Algorithms {
     pub fn get_algo(s: &str) -> Self {
         match s {
-            "flou_moyen" => Self::FlouMoyen,
             "erosion" => Self::Erosion,
-            _ => Self::FlouMoyen
+            "flou_moyen" | _ => Self::FlouMoyen,
         }
     }
 
@@ -49,7 +49,6 @@ fn index() -> &'static str {
 #[post("/save", data = "<data>")]
 async fn save(content_type: &ContentType, data: Data<'_>) -> status::Accepted<String> {
     let multipart_form_data = utils::get_multipart_form_data(content_type, data).await;
-
     let (status, _, _) = utils::save_image(multipart_form_data);
     status
 }
@@ -57,31 +56,26 @@ async fn save(content_type: &ContentType, data: Data<'_>) -> status::Accepted<St
 #[post("/floumoyen", data = "<data>")]
 async fn flou_moyen(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, NotFound<String>> {
     let multipart_form_data = utils::get_multipart_form_data(content_type, data).await;
+    let (_, path, algo_name) = utils::save_image(multipart_form_data);
+    let algo = Algorithms::get_algo(&algo_name);
 
-    let (_, path, algo) = utils::save_image(multipart_form_data);
+    let path = path.ok_or_else(|| NotFound(String::from("Could not save file")))?;
+    let path = match filter::run_algo(path, algo, algo_name) {
+        Err(e) => Err(NotFound(e.get_error_string())),
+        Ok(path) => Ok(path),
+    }?;
 
-    let algo_name = algo.clone();
-    let algo = Algorithms::get_algo(&algo);
-
-    if let None = path {
-        return Err(NotFound(String::from("Could not save file")));
-    }
-    //let path = filter::flou_moyen(path.unwrap(), 2);
-    let path = filter::run_algo(path.unwrap(), algo, algo_name);
-    if let Err(e) = path {
-        return Err(NotFound(e.get_error_string()));
-    }
-
-    NamedFile::open(&path.unwrap()).await.map_err(|e| NotFound(e.to_string()))
+    NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
 }
 
 #[rocket::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     rocket::build()
-    .mount("/public", FileServer::from("images"))
-    .mount("/showimages", routes![files])
-    .mount("/", routes![index, save, flou_moyen])
-    .launch().await?;
+        .mount("/public", FileServer::from("images"))
+        .mount("/showimages", routes![files])
+        .mount("/", routes![index, save, flou_moyen])
+        .launch()
+        .await?;
 
     Ok(())
 }

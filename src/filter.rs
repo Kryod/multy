@@ -11,11 +11,19 @@ pub enum FilterError {
 }
 
 impl FilterError {
-    pub fn get_error_string(&self) -> String {
+    pub fn get_error_string(self) -> String {
         match self {
-            FilterError::DestImgError(s) => s.clone(),
-            FilterError::ImageError(s) => s.clone(),
-            FilterError::OtherError(s) => s.clone(),
+            FilterError::DestImgError(s) |
+            FilterError::ImageError(s) |
+            FilterError::OtherError(s) => s,
+        }
+    }
+
+    pub fn get_ref_error_string<'a>(&'a self) -> &'a str {
+        match self {
+            FilterError::DestImgError(ref s) |
+            FilterError::ImageError(ref s) |
+            FilterError::OtherError(ref s) => s,
         }
     }
 }
@@ -41,14 +49,14 @@ impl Display for FilterError {
 
 impl Error for FilterError {}
 
-pub fn run_algo(path: PathBuf, algo: Algorithms, alg_name: String) -> Result<PathBuf, FilterError> {
-    let mut fname = String::with_capacity(alg_name.len() + 2);
+pub fn run_algo(path: PathBuf, algo: Algorithms, algo_name: String) -> Result<PathBuf, FilterError> {
+    let mut fname = String::with_capacity(algo_name.len() + 2);
     fname.push('_');
-    fname.push_str(&alg_name);
+    fname.push_str(&algo_name);
     fname.push('.');
 
     let dest = get_new_image_file(&path, &fname)?;
-    let img = image::open(path).unwrap();
+    let img = image::open(path)?;
     let radius = 2;
 
     let buffer = match algo {
@@ -56,7 +64,7 @@ pub fn run_algo(path: PathBuf, algo: Algorithms, alg_name: String) -> Result<Pat
         Algorithms::Erosion => erosion(&img, radius),
     };
 
-    buffer.save(&dest).unwrap();
+    buffer.save(&dest)?;
     Ok(dest)
 }
 
@@ -98,7 +106,6 @@ pub fn flou_moyen(img: &DynamicImage, radius: u32) -> ImageBuffer<Rgba<u8>, Vec<
 }
 
 pub fn erosion(img: &DynamicImage, radius: u32) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-
     let buffer = compute_buffer(&img, radius, [u8::MAX; 4],
         |pix, min| {
             if min[0] > pix[0] { min[0] = pix[0] }
@@ -129,9 +136,13 @@ pub fn get_new_image_file(path: &PathBuf, file_name_add: &str) -> Result<PathBuf
     // prevent string realloc
     let mut new_path = String::with_capacity(file_stem.len() + file_name_add.len() + extension.len());
 
-    new_path.push_str(file_stem.to_str().unwrap());
+    new_path.push_str(file_stem.to_str().ok_or_else(||
+        FilterError::OtherError(String::from("Failed to extract str from file_stem"))
+    )?);
     new_path.push_str(file_name_add);
-    new_path.push_str(extension.to_str().unwrap());
+    new_path.push_str(extension.to_str().ok_or_else(||
+        FilterError::OtherError(String::from("Failed to extract str from extension"))
+    )?);
 
     let base_path = "images";
     let mut to_save = PathBuf::with_capacity(base_path.len() + new_path.len());
