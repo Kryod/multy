@@ -4,6 +4,7 @@
 .idea/*
 Cargo.lock
 
+images/*median*
 images/*erosion*
 images/*dilatation*
 images/*flou_moyen*
