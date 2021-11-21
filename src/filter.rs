@@ -1,5 +1,5 @@
 use image::{ImageBuffer, ImageError, Rgba};
-use std::{error::Error, ffi::OsStr, fmt::Display, path::PathBuf};
+use std::{error::Error, ffi::OsStr, fmt::Display, path::PathBuf, path::Path};
 
 use crate::Algorithms;
 type Buffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
@@ -20,7 +20,7 @@ impl FilterError {
         }
     }
 
-    pub fn get_ref_error_string<'a>(&'a self) -> &'a str {
+    pub fn get_ref_error_string(&self) -> &'_ str {
         match self {
             FilterError::DestImgError(ref s) |
             FilterError::ImageError(ref s) |
@@ -70,7 +70,7 @@ pub fn run_algo(path: PathBuf, algo: Algorithms, algo_name: String) -> Result<Pa
     Ok(dest)
 }
 
-pub fn orig_filename_extension(path: &PathBuf) -> Result<(&OsStr, &OsStr), FilterError> {
+pub fn orig_filename_extension(path: &Path) -> Result<(&OsStr, &OsStr), FilterError> {
     let file_stem = path.file_stem();
     let extension = path.extension();
 
@@ -83,7 +83,7 @@ pub fn orig_filename_extension(path: &PathBuf) -> Result<(&OsStr, &OsStr), Filte
 }
 
 pub fn flou_moyen(img: &Buffer, radius: u32) -> Buffer {
-    compute_buffer(&img, radius, [0; 4],
+    compute_buffer(img, radius, [0; 4],
         |pix, sum| {
             sum[0] += pix[0] as u32;
             sum[1] += pix[1] as u32;
@@ -106,7 +106,7 @@ pub fn flou_moyen(img: &Buffer, radius: u32) -> Buffer {
 }
 
 pub fn erosion(img: &Buffer, radius: u32) -> Buffer {
-    compute_buffer(&img, radius, [u8::MAX; 4],
+    compute_buffer(img, radius, [u8::MAX; 4],
         |pix, min| {
             if min[0] > pix[0] { min[0] = pix[0] }
             if min[1] > pix[1] { min[1] = pix[1] }
@@ -124,7 +124,7 @@ pub fn erosion(img: &Buffer, radius: u32) -> Buffer {
 }
 
 pub fn dilatation(img: &Buffer, radius: u32) -> Buffer {
-    compute_buffer(&img, radius, [u8::MIN; 4],
+    compute_buffer(img, radius, [u8::MIN; 4],
         |pix, max| {
             if max[0] < pix[0] { max[0] = pix[0] }
             if max[1] < pix[1] { max[1] = pix[1] }
@@ -145,7 +145,7 @@ pub fn median(img: &Buffer, radius: u32) -> Buffer {
     let capacity = (radius * 2 + 1).pow(2) as usize;
     let accumulator = Vec::with_capacity(capacity);
 
-    compute_buffer(&img, radius, accumulator,
+    compute_buffer(img, radius, accumulator,
         |pix, vec| {
             let brightness = pix[0] / 4 + pix[1] / 4 + pix[2] / 4 + pix[3] / 4;
             vec.push((brightness, *pix));
@@ -160,8 +160,8 @@ pub fn median(img: &Buffer, radius: u32) -> Buffer {
     )
 }
 
-pub fn get_new_image_file(path: &PathBuf, file_name_add: &str) -> Result<PathBuf, FilterError> {
-    let (file_stem, extension) = orig_filename_extension(&path)?;
+pub fn get_new_image_file(path: &Path, file_name_add: &str) -> Result<PathBuf, FilterError> {
+    let (file_stem, extension) = orig_filename_extension(path)?;
 
     // prevent string realloc
     let mut new_path = String::with_capacity(file_stem.len() + file_name_add.len() + extension.len());

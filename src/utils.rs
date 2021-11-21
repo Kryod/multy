@@ -65,7 +65,7 @@ pub fn save_image(mut multipart_form_data: MultipartFormData) -> (status::Accept
         };
 
         match fs::copy(path, &save_path) {
-            Ok(_) => (status::Accepted(Some(format!("Image saved"))), Some(save_path), algorithm),
+            Ok(_) => (status::Accepted(Some(String::from("Image saved"))), Some(save_path), algorithm),
             Err(e) => (status::Accepted(Some(format!("An Error occured while saving file: {}", e))), None, algorithm)
         }
     } else {

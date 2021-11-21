@@ -25,7 +25,7 @@ impl Algorithms {
         match s {
             "erosion" => Self::Erosion,
             "dilatation" => Self::Dilatation,
-            "flou_moyen" | _ => Self::FlouMoyen,
+            _ /* flou_moyen */ => Self::FlouMoyen,
         }
     }
 }
