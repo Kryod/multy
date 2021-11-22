@@ -4,6 +4,9 @@
 .idea/*
 Cargo.lock
 
+# macOS
+.DS_Store
+
 images/*median*
 images/*erosion*
 images/*dilatation*
