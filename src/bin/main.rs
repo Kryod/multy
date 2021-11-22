@@ -1,23 +1,17 @@
-#![feature(proc_macro_hygiene, decl_macro, test)]
+#![feature(proc_macro_hygiene, decl_macro)]
 
 #[macro_use]
 extern crate rocket;
-
-mod pixel_ops;
-mod file;
-
-pub mod utils;
-pub mod filter;
 
 use std::error::Error;
 use std::path::{Path, PathBuf};
 use rocket::data::Data;
 use rocket::fs::{FileServer, NamedFile};
-use rocket::response::status;
-use rocket::response::status::NotFound;
+use rocket::response::status::{self, NotFound};
 use rocket::http::ContentType;
 
-use crate::filter::Algorithms;
+use multy::filter::{self, Algorithms};
+use multy::utils;
 
 #[get("/<file..>")]
 async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {

@@ -1,7 +1,7 @@
 use image::{ImageBuffer, Rgba};
 use std::path::PathBuf;
 
-type Buffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
+pub type Buffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
 use crate::file::{FilterError, get_new_image_file};
 
 pub enum Algorithms {
@@ -69,7 +69,7 @@ pub fn flou_moyen(img: &Buffer, radius: u32) -> Buffer {
 pub fn optimized_blur(img: &Buffer, radius: u32) -> Buffer {
     use crate::pixel_ops::{add_pix, sub_pix, pix_as_u32};
 
-    let (width, height) = img.dimensions() ;
+    let (width, height) = img.dimensions();
     let mut sum_table = vec![[0; 4]; (width * height) as usize];
 
     sum_table[0] = pix_as_u32(img.get_pixel(0, 0).0);
@@ -249,106 +249,4 @@ fn compute_buffer<T>(
     }
 
     buffer
-}
-
-#[cfg(test)]
-mod tests {
-    extern crate test;
-    use test::Bencher;
-
-    use std::{error::Error, path::PathBuf};
-    use crate::file::get_new_image_file;
-    use crate::filter::{
-        flou_moyen, optimized_blur, erosion, dilatation, median,
-        Buffer
-    };
-
-    const RADIUS: u32 = 120;
-    const IMG: &str = "images/lena_1960.jpg";
-
-    fn global_test(algo_name: &str, algo: fn(&Buffer, u32) -> Buffer) -> Result<(), Box<dyn Error>> {
-        let fname = format!("_{}.", algo_name);
-        let path = PathBuf::from(IMG);
-
-        let dest = get_new_image_file(&path, &fname)?;
-        let img = image::open(path)?.into_rgba8();
-
-        let start = std::time::Instant::now();
-        let buffer = algo(&img, RADIUS);
-        let elapsed = start.elapsed().as_millis();
-        println!("{}: {} ms", algo_name, elapsed);
-
-        buffer.save(&dest)?;
-        Ok(())
-    }
-
-    #[test]
-    fn test_flou_moyen() -> Result<(), Box<dyn Error>> {
-        global_test("flou_moyen", flou_moyen)
-    }
-
-    #[bench]
-    fn bench_flou_moyen(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
-        let path = PathBuf::from(IMG);
-        let img = image::open(path)?.into_rgba8();
-
-        b.iter(|| flou_moyen(&img, RADIUS));
-        Ok(())
-    }
-
-    #[test]
-    fn test_flou_moyen_opt() -> Result<(), Box<dyn Error>> {
-        global_test("optimized_blur", optimized_blur)
-    }
-
-    #[bench]
-    fn bench_flou_moyen_opt(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
-        let path = PathBuf::from(IMG);
-        let img = image::open(path)?.into_rgba8();
-
-        b.iter(|| optimized_blur(&img, RADIUS));
-        Ok(())
-    }
-
-    #[test]
-    fn test_erosion() -> Result<(), Box<dyn Error>> {
-        global_test("erosion", erosion)
-    }
-
-    #[bench]
-    fn bench_erosion(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
-        let path = PathBuf::from(IMG);
-        let img = image::open(path)?.into_rgba8();
-
-        b.iter(|| erosion(&img, RADIUS));
-        Ok(())
-    }
-
-    #[test]
-    fn test_dilatation() -> Result<(), Box<dyn Error>> {
-        global_test("dilatation", dilatation)
-    }
-
-    #[bench]
-    fn bench_dilatation(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
-        let path = PathBuf::from(IMG);
-        let img = image::open(path)?.into_rgba8();
-
-        b.iter(|| dilatation(&img, RADIUS));
-        Ok(())
-    }
-
-    #[test]
-    fn test_median() -> Result<(), Box<dyn Error>> {
-        global_test("median", median)
-    }
-
-    #[bench]
-    fn bench_median(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
-        let path = PathBuf::from(IMG);
-        let img = image::open(path)?.into_rgba8();
-
-        b.iter(|| median(&img, RADIUS));
-        Ok(())
-    }
 }
