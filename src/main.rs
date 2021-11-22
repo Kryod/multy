@@ -3,6 +3,7 @@
 #[macro_use]
 extern crate rocket;
 
+mod pixel_ops;
 pub mod utils;
 pub mod filter;
 

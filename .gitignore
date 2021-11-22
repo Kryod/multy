@@ -8,3 +8,4 @@ images/*median*
 images/*erosion*
 images/*dilatation*
 images/*flou_moyen*
+images/*optimized_blur*

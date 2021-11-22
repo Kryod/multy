@@ -105,6 +105,72 @@ pub fn flou_moyen(img: &Buffer, radius: u32) -> Buffer {
     )
 }
 
+pub fn optimized_blur(img: &Buffer, radius: u32) -> Buffer {
+    use crate::pixel_ops::{add_pix, sub_pix, pix_as_u32};
+
+    let (width, height) = img.dimensions() ;
+    let mut sum_table = vec![[0; 4]; (width * height) as usize];
+
+    sum_table[0] = pix_as_u32(img.get_pixel(0, 0).0);
+    for x in 1..width {
+        sum_table[x as usize] = add_pix(
+            sum_table[x as usize - 1],
+            pix_as_u32(img.get_pixel(x, 0).0)
+        );
+    }
+    for y in 1..height {
+        sum_table[(y * width) as usize] = add_pix(
+            sum_table[((y - 1) * width) as usize],
+            pix_as_u32(img.get_pixel(0, y).0)
+        );
+    }
+    for y in 1..height {
+        for x in 1..width {
+            // sum[x,y] = sum[x-1,y] + sum[x,y-1] - sum[x-1,y-1] + img[x,y]
+            sum_table[(x + y * width) as usize] = add_pix(
+                sub_pix(
+                    add_pix(
+                        sum_table[(x - 1 + y * width) as usize],
+                        sum_table[(x + (y - 1) * width) as usize]
+                    ),
+                    sum_table[(x - 1 + (y - 1) * width) as usize]
+                ),
+                pix_as_u32(img.get_pixel(x, y).0)
+            );
+        }
+    }
+
+    let mut buffer = image::ImageBuffer::new(width, height);
+
+    for y in 0..height {
+        let y_max = y.saturating_add(radius).min(height - 1);
+        let y_min = y.saturating_sub(radius + 1);
+        let y_len = y_max - y_min;
+
+        for x in 0..width {
+            let x_mas = x.saturating_add(radius).min(width - 1);
+            let x_min = x.saturating_sub(radius + 1);
+
+            let pix_max = sum_table[(x_mas + y_max * width) as usize];
+            let pix_min = sum_table[(x_min + y_min * width) as usize];
+            let pix_min_col = sum_table[(x_mas + y_min * width) as usize];
+            let pix_min_row = sum_table[(x_min + y_max * width) as usize];
+            let neighbours = (x_mas - x_min) * y_len;
+
+            let sum = [
+                ((pix_max[0] + pix_min[0] - pix_min_col[0] - pix_min_row[0]) / neighbours) as u8,
+                ((pix_max[1] + pix_min[1] - pix_min_col[1] - pix_min_row[1]) / neighbours) as u8,
+                ((pix_max[2] + pix_min[2] - pix_min_col[2] - pix_min_row[2]) / neighbours) as u8,
+                ((pix_max[3] + pix_min[3] - pix_min_col[3] - pix_min_row[3]) / neighbours) as u8,
+            ];
+
+            buffer.put_pixel(x, y, image::Rgba(sum))
+        }
+    }
+
+    buffer
+}
+
 pub fn erosion(img: &Buffer, radius: u32) -> Buffer {
     compute_buffer(img, radius, [u8::MAX; 4],
         |pix, min| {
@@ -147,7 +213,7 @@ pub fn median(img: &Buffer, radius: u32) -> Buffer {
 
     compute_buffer(img, radius, accumulator,
         |pix, vec| {
-            let brightness = pix[0] / 4 + pix[1] / 4 + pix[2] / 4 + pix[3] / 4;
+            let brightness = pix[0] / 3 + pix[1] / 3 + pix[2] / 3;
             vec.push((brightness, *pix));
         },
         |col, vec| {
@@ -197,7 +263,7 @@ fn compute_buffer<T>(
     let mut partial_blur = std::collections::VecDeque::with_capacity(radius as usize * 2 + 2);
 
     for y in 0..height {
-        let y_max = y.saturating_add(radius + 1).min(height);
+        let y_max = y.saturating_add(radius + 1).min(height - 1);
         let y_min = y.saturating_sub(radius);
         partial_blur.clear();
 
@@ -254,32 +320,32 @@ mod tests {
 
     use std::{error::Error, path::PathBuf};
     use crate::filter::{
-        get_new_image_file, flou_moyen, erosion, dilatation, median
+        get_new_image_file, flou_moyen, optimized_blur, erosion, dilatation, median,
+        Buffer
     };
 
-    const RADIUS: u32 = 2;
-    const IMG: &str = "images/lena.jpg";
+    const RADIUS: u32 = 120;
+    const IMG: &str = "images/lena_1960.jpg";
 
-    #[test]
-    fn test_flou_moyen() -> Result<(), Box<dyn Error>> {
+    fn global_test(algo_name: &str, algo: fn(&Buffer, u32) -> Buffer) -> Result<(), Box<dyn Error>> {
+        let fname = format!("_{}.", algo_name);
         let path = PathBuf::from(IMG);
-        let algo_name = "flou_moyen";
-
-        let mut fname = String::with_capacity(algo_name.len() + 2);
-        fname.push('_');
-        fname.push_str(&algo_name);
-        fname.push('.');
 
         let dest = get_new_image_file(&path, &fname)?;
         let img = image::open(path)?.into_rgba8();
 
         let start = std::time::Instant::now();
-        let buffer = flou_moyen(&img, RADIUS);
+        let buffer = algo(&img, RADIUS);
         let elapsed = start.elapsed().as_millis();
-        println!("flou_moyen: {} ms", elapsed);
+        println!("{}: {} ms", algo_name, elapsed);
 
         buffer.save(&dest)?;
         Ok(())
+    }
+
+    #[test]
+    fn test_flou_moyen() -> Result<(), Box<dyn Error>> {
+        global_test("flou_moyen", flou_moyen)
     }
 
     #[bench]
@@ -292,25 +358,22 @@ mod tests {
     }
 
     #[test]
-    fn test_erosion() -> Result<(), Box<dyn Error>> {
+    fn test_flou_moyen_opt() -> Result<(), Box<dyn Error>> {
+        global_test("optimized_blur", optimized_blur)
+    }
+
+    #[bench]
+    fn bench_flou_moyen_opt(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
         let path = PathBuf::from(IMG);
-        let algo_name = "erosion";
-
-        let mut fname = String::with_capacity(algo_name.len() + 2);
-        fname.push('_');
-        fname.push_str(&algo_name);
-        fname.push('.');
-
-        let dest = get_new_image_file(&path, &fname)?;
         let img = image::open(path)?.into_rgba8();
 
-        let start = std::time::Instant::now();
-        let buffer = erosion(&img, RADIUS);
-        let elapsed = start.elapsed().as_millis();
-        println!("erosion: {} ms", elapsed);
-
-        buffer.save(&dest)?;
+        b.iter(|| optimized_blur(&img, RADIUS));
         Ok(())
+    }
+
+    #[test]
+    fn test_erosion() -> Result<(), Box<dyn Error>> {
+        global_test("erosion", erosion)
     }
 
     #[bench]
@@ -324,24 +387,7 @@ mod tests {
 
     #[test]
     fn test_dilatation() -> Result<(), Box<dyn Error>> {
-        let path = PathBuf::from(IMG);
-        let algo_name = "dilatation";
-
-        let mut fname = String::with_capacity(algo_name.len() + 2);
-        fname.push('_');
-        fname.push_str(&algo_name);
-        fname.push('.');
-
-        let dest = get_new_image_file(&path, &fname)?;
-        let img = image::open(path)?.into_rgba8();
-
-        let start = std::time::Instant::now();
-        let buffer = dilatation(&img, RADIUS);
-        let elapsed = start.elapsed().as_millis();
-        println!("dilatation: {} ms", elapsed);
-
-        buffer.save(&dest)?;
-        Ok(())
+        global_test("dilatation", dilatation)
     }
 
     #[bench]
@@ -355,24 +401,7 @@ mod tests {
 
     #[test]
     fn test_median() -> Result<(), Box<dyn Error>> {
-        let path = PathBuf::from(IMG);
-        let algo_name = "median";
-
-        let mut fname = String::with_capacity(algo_name.len() + 2);
-        fname.push('_');
-        fname.push_str(&algo_name);
-        fname.push('.');
-
-        let dest = get_new_image_file(&path, &fname)?;
-        let img = image::open(path)?.into_rgba8();
-
-        let start = std::time::Instant::now();
-        let buffer = median(&img, RADIUS);
-        let elapsed = start.elapsed().as_millis();
-        println!("median: {} ms", elapsed);
-
-        buffer.save(&dest)?;
-        Ok(())
+        global_test("median", median)
     }
 
     #[bench]
