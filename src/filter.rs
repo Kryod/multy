@@ -1,54 +1,26 @@
-use image::{ImageBuffer, ImageError, Rgba};
-use std::{error::Error, ffi::OsStr, fmt::Display, path::PathBuf, path::Path};
+use image::{ImageBuffer, Rgba};
+use std::path::PathBuf;
 
-use crate::Algorithms;
 type Buffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
+use crate::file::{FilterError, get_new_image_file};
 
-#[derive(Debug)]
-pub enum FilterError {
-    DestImgError(String),
-    ImageError(String),
-    OtherError(String),
+pub enum Algorithms {
+    FlouMoyen,
+    Erosion,
+    Dilatation,
+    Median,
 }
 
-impl FilterError {
-    pub fn get_error_string(self) -> String {
-        match self {
-            FilterError::DestImgError(s) |
-            FilterError::ImageError(s) |
-            FilterError::OtherError(s) => s,
-        }
-    }
-
-    pub fn get_ref_error_string(&self) -> &'_ str {
-        match self {
-            FilterError::DestImgError(ref s) |
-            FilterError::ImageError(ref s) |
-            FilterError::OtherError(ref s) => s,
+impl Algorithms {
+    pub fn get_algo(s: &str) -> Self {
+        match s {
+            "erosion" => Self::Erosion,
+            "dilatation" => Self::Dilatation,
+            "median" => Self::Median,
+            _ /* flou_moyen */ => Self::FlouMoyen,
         }
     }
 }
-
-impl From<ImageError> for FilterError {
-    fn from(err: ImageError) -> Self {
-        match err {
-            ImageError::Decoding(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Encoding(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Parameter(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Limits(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Unsupported(e) => FilterError::ImageError(e.to_string()),
-            ImageError::IoError(e) => FilterError::ImageError(e.to_string()),
-        }
-    }
-}
-
-impl Display for FilterError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl Error for FilterError {}
 
 pub fn run_algo(path: PathBuf, algo: Algorithms, algo_name: String) -> Result<PathBuf, FilterError> {
     let mut fname = String::with_capacity(algo_name.len() + 2);
@@ -64,22 +36,11 @@ pub fn run_algo(path: PathBuf, algo: Algorithms, algo_name: String) -> Result<Pa
         Algorithms::FlouMoyen => flou_moyen(&img, radius),
         Algorithms::Erosion => erosion(&img, radius),
         Algorithms::Dilatation => dilatation(&img, radius),
+        Algorithms::Median => median(&img, radius),
     };
 
     buffer.save(&dest)?;
     Ok(dest)
-}
-
-pub fn orig_filename_extension(path: &Path) -> Result<(&OsStr, &OsStr), FilterError> {
-    let file_stem = path.file_stem();
-    let extension = path.extension();
-
-    match (file_stem, extension) {
-        (Some(file_stem), Some(extension)) => Ok((file_stem, extension)),
-        (None, Some(_)) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have a filename", path))),
-        (Some(_), None) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have an extension", path))),
-        (None, None) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have any filename or extension", path))),
-    }
 }
 
 pub fn flou_moyen(img: &Buffer, radius: u32) -> Buffer {
@@ -226,29 +187,6 @@ pub fn median(img: &Buffer, radius: u32) -> Buffer {
     )
 }
 
-pub fn get_new_image_file(path: &Path, file_name_add: &str) -> Result<PathBuf, FilterError> {
-    let (file_stem, extension) = orig_filename_extension(path)?;
-
-    // prevent string realloc
-    let mut new_path = String::with_capacity(file_stem.len() + file_name_add.len() + extension.len());
-
-    new_path.push_str(file_stem.to_str().ok_or_else(||
-        FilterError::OtherError(String::from("Failed to extract str from file_stem"))
-    )?);
-    new_path.push_str(file_name_add);
-    new_path.push_str(extension.to_str().ok_or_else(||
-        FilterError::OtherError(String::from("Failed to extract str from extension"))
-    )?);
-
-    let base_path = "images";
-    let mut to_save = PathBuf::with_capacity(base_path.len() + new_path.len());
-
-    to_save.push(base_path);
-    to_save.push(new_path);
-
-    Ok(to_save)
-}
-
 fn compute_buffer<T>(
     img: &Buffer,
     radius: u32,
@@ -319,8 +257,9 @@ mod tests {
     use test::Bencher;
 
     use std::{error::Error, path::PathBuf};
+    use crate::file::get_new_image_file;
     use crate::filter::{
-        get_new_image_file, flou_moyen, optimized_blur, erosion, dilatation, median,
+        flou_moyen, optimized_blur, erosion, dilatation, median,
         Buffer
     };
 

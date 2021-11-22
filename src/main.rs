@@ -4,6 +4,8 @@
 extern crate rocket;
 
 mod pixel_ops;
+mod file;
+
 pub mod utils;
 pub mod filter;
 
@@ -15,21 +17,7 @@ use rocket::response::status;
 use rocket::response::status::NotFound;
 use rocket::http::ContentType;
 
-pub enum Algorithms {
-    FlouMoyen,
-    Erosion,
-    Dilatation,
-}
-
-impl Algorithms {
-    pub fn get_algo(s: &str) -> Self {
-        match s {
-            "erosion" => Self::Erosion,
-            "dilatation" => Self::Dilatation,
-            _ /* flou_moyen */ => Self::FlouMoyen,
-        }
-    }
-}
+use crate::filter::Algorithms;
 
 #[get("/<file..>")]
 async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
