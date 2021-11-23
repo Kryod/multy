@@ -15,7 +15,7 @@ use multy::utils;
 
 #[get("/<file..>")]
 async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
-    let path = Path::new("images/").join(file);
+    let path = Path::new("static/images/").join(file);
     NamedFile::open(&path).await.map_err(|_| NotFound(format!("Bad path: {:?}", path)))
 }
 
@@ -46,10 +46,37 @@ async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, 
     NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
 }
 
+fn gen_html() {
+    let mut html = String::from("
+<head>
+    <title>Multy</title>
+</head>
+
+<body>
+    ");
+
+
+    for entry in std::fs::read_dir("static/images").unwrap() {
+        let osstr = entry.unwrap().file_name();
+        let filename = osstr.to_str().unwrap();
+        html.push_str(&format!("
+    <pre>{}</pre>
+    <img src=\"images/{}\">
+    </br>
+        ", filename, filename));
+    }
+    html.push_str("
+</body>");
+
+    std::fs::write("static/index.html", html.as_bytes()).unwrap();
+}
+
 #[rocket::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    gen_html();
     rocket::build()
-        .mount("/public", FileServer::from("images"))
+        .mount("/public", FileServer::from("static"))
+        //.mount("/public", FileServer::from("images"))
         .mount("/showimages", routes![files])
         .mount("/", routes![index, save, apply])
         .launch()

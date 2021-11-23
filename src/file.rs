@@ -73,7 +73,7 @@ pub fn get_new_image_file(path: &Path, file_name_add: &str) -> Result<PathBuf, F
         FilterError::OtherError(String::from("Failed to extract str from extension"))
     )?);
 
-    let base_path = "images";
+    let base_path = "static/images";
     let mut to_save = PathBuf::with_capacity(base_path.len() + new_path.len());
 
     to_save.push(base_path);

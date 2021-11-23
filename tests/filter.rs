@@ -6,7 +6,7 @@ use multy::filter::{
 };
 
 const RADIUS: u32 = 2;
-const IMG: &str = "images/lena.jpg";
+const IMG: &str = "static/images/lena.jpg";
 
 fn global_test(algo_name: &str, algo: fn(&Buffer, u32) -> Buffer) -> Result<(), Box<dyn Error>> {
     let fname = format!("_{}.", algo_name);
