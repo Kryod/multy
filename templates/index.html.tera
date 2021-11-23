@@ -1,0 +1,9 @@
+<head>
+    <title>Galerie</title>
+</head>
+
+<body>
+{% for img in images %}
+    <a href="public/{{ img }}">{{ img }}</a><br />
+{% endfor %}
+</body>

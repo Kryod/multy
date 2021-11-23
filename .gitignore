@@ -3,3 +3,12 @@
 
 .idea/*
 Cargo.lock
+
+# macOS
+.DS_Store
+
+static/images/*median*
+static/images/*erosion*
+static/images/*dilatation*
+static/images/*flou_moyen*
+static/images/*optimized_blur*

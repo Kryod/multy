@@ -1,61 +1,50 @@
-use image::{DynamicImage, GenericImageView, ImageError, ImageBuffer, Rgba};
-use std::{error::Error, ffi::OsStr, fmt::Display, path::PathBuf};
+use image::{ImageBuffer, Rgba};
+use std::path::PathBuf;
 
-#[derive(Debug)]
-pub enum FilterError {
-    DestImgError(String),
-    ImageError(String),
-    OtherError(String),
+pub type Buffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
+use crate::file::{FilterError, get_new_image_file};
+
+pub enum Algorithms {
+    FlouMoyen,
+    Erosion,
+    Dilatation,
+    Median,
 }
 
-impl FilterError {
-    pub fn get_error_string(&self) -> String {
-        match self {
-            FilterError::DestImgError(s) => s.clone(),
-            FilterError::ImageError(s) => s.clone(),
-            FilterError::OtherError(s) => s.clone(),
+impl Algorithms {
+    pub fn get_algo(s: &str) -> Self {
+        match s {
+            "erosion" => Self::Erosion,
+            "dilatation" => Self::Dilatation,
+            "median" => Self::Median,
+            _ /* flou_moyen */ => Self::FlouMoyen,
         }
     }
 }
 
-impl From<ImageError> for FilterError {
-    fn from(err: ImageError) -> Self {
-        match err {
-            ImageError::Decoding(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Encoding(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Parameter(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Limits(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Unsupported(e) => FilterError::ImageError(e.to_string()),
-            ImageError::IoError(e) => FilterError::ImageError(e.to_string()),
-        }
-    }
+pub fn run_algo(path: PathBuf, algo: Algorithms, algo_name: String) -> Result<PathBuf, FilterError> {
+    let mut fname = String::with_capacity(algo_name.len() + 2);
+    fname.push('_');
+    fname.push_str(&algo_name);
+    fname.push('.');
+
+    let dest = get_new_image_file(&path, &fname)?;
+    let img = image::open(path)?.into_rgba8();
+    let radius = 2;
+
+    let buffer = match algo {
+        Algorithms::FlouMoyen => flou_moyen(&img, radius),
+        Algorithms::Erosion => erosion(&img, radius),
+        Algorithms::Dilatation => dilatation(&img, radius),
+        Algorithms::Median => median(&img, radius),
+    };
+
+    buffer.save(&dest)?;
+    Ok(dest)
 }
 
-impl Display for FilterError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl Error for FilterError {}
-
-pub fn orig_filename_extension(path: &PathBuf) -> Result<(&OsStr, &OsStr), FilterError> {
-    let file_stem = path.file_stem();
-    let extension = path.extension();
-
-    match (file_stem, extension) {
-        (Some(file_stem), Some(extension)) => Ok((file_stem, extension)),
-        (None, Some(_)) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have a filename", path))),
-        (Some(_), None) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have an extension", path))),
-        (None, None) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have any filename or extension", path))),
-    }
-}
-
-pub fn flou_moyen(path: PathBuf, radius: u32) -> Result<PathBuf, FilterError> {
-    let dest = get_new_image_file(&path, "_flou_moyen.")?;
-    let img = image::open(path).unwrap();
-
-    let buffer = compute_buffer(img, radius, [0; 4],
+pub fn flou_moyen(img: &Buffer, radius: u32) -> Buffer {
+    compute_buffer(img, radius, [0; 4],
         |pix, sum| {
             sum[0] += pix[0] as u32;
             sum[1] += pix[1] as u32;
@@ -74,18 +63,77 @@ pub fn flou_moyen(path: PathBuf, radius: u32) -> Result<PathBuf, FilterError> {
             (sum[2] / neighbours) as u8,
             (sum[3] / neighbours) as u8,
         ],
-    );
-
-    buffer.save(&dest).unwrap();
-    Ok(dest)
+    )
 }
 
-pub fn erosion(path: PathBuf) -> Result<PathBuf, FilterError> {
-    let dest = get_new_image_file(&path, "_erosion.")?;
-    let img = image::open(path).unwrap();
-    let radius = 2;
+pub fn optimized_blur(img: &Buffer, radius: u32) -> Buffer {
+    use crate::pixel_ops::{add_pix, sub_pix, pix_as_u32};
 
-    let buffer = compute_buffer(img, radius, [u8::MAX; 4],
+    let (width, height) = img.dimensions();
+    let mut sum_table = vec![[0; 4]; (width * height) as usize];
+
+    sum_table[0] = pix_as_u32(img.get_pixel(0, 0).0);
+    for x in 1..width {
+        sum_table[x as usize] = add_pix(
+            sum_table[x as usize - 1],
+            pix_as_u32(img.get_pixel(x, 0).0)
+        );
+    }
+    for y in 1..height {
+        sum_table[(y * width) as usize] = add_pix(
+            sum_table[((y - 1) * width) as usize],
+            pix_as_u32(img.get_pixel(0, y).0)
+        );
+    }
+    for y in 1..height {
+        for x in 1..width {
+            // sum[x,y] = sum[x-1,y] + sum[x,y-1] - sum[x-1,y-1] + img[x,y]
+            sum_table[(x + y * width) as usize] = add_pix(
+                sub_pix(
+                    add_pix(
+                        sum_table[(x - 1 + y * width) as usize],
+                        sum_table[(x + (y - 1) * width) as usize]
+                    ),
+                    sum_table[(x - 1 + (y - 1) * width) as usize]
+                ),
+                pix_as_u32(img.get_pixel(x, y).0)
+            );
+        }
+    }
+
+    let mut buffer = Buffer::new(width, height);
+
+    for y in 0..height {
+        let y_max = y.saturating_add(radius).min(height - 1);
+        let y_min = y.saturating_sub(radius + 1);
+        let y_len = y_max - y_min;
+
+        for x in 0..width {
+            let x_mas = x.saturating_add(radius).min(width - 1);
+            let x_min = x.saturating_sub(radius + 1);
+
+            let pix_max = sum_table[(x_mas + y_max * width) as usize];
+            let pix_min = sum_table[(x_min + y_min * width) as usize];
+            let pix_min_col = sum_table[(x_mas + y_min * width) as usize];
+            let pix_min_row = sum_table[(x_min + y_max * width) as usize];
+            let neighbours = (x_mas - x_min) * y_len;
+
+            let sum = [
+                ((pix_max[0] + pix_min[0] - pix_min_col[0] - pix_min_row[0]) / neighbours) as u8,
+                ((pix_max[1] + pix_min[1] - pix_min_col[1] - pix_min_row[1]) / neighbours) as u8,
+                ((pix_max[2] + pix_min[2] - pix_min_col[2] - pix_min_row[2]) / neighbours) as u8,
+                ((pix_max[3] + pix_min[3] - pix_min_col[3] - pix_min_row[3]) / neighbours) as u8,
+            ];
+
+            buffer.put_pixel(x, y, image::Rgba(sum))
+        }
+    }
+
+    buffer
+}
+
+pub fn erosion(img: &Buffer, radius: u32) -> Buffer {
+    compute_buffer(img, radius, [u8::MAX; 4],
         |pix, min| {
             if min[0] > pix[0] { min[0] = pix[0] }
             if min[1] > pix[1] { min[1] = pix[1] }
@@ -98,58 +146,68 @@ pub fn erosion(path: PathBuf) -> Result<PathBuf, FilterError> {
             if min[2] > col[2] { min[2] = col[2] }
             if min[3] > col[3] { min[3] = col[3] }
         },
-        |min, _| [
-            min[0] as u8,
-            min[1] as u8,
-            min[2] as u8,
-            min[3] as u8,
-        ]
-    );
-
-    buffer.save(&dest).unwrap();
-    Ok(dest)
+        |min, _| min
+    )
 }
 
-pub fn get_new_image_file(path: &PathBuf, file_name_add: &str) -> Result<PathBuf, FilterError> {
-    let (file_stem, extension) = orig_filename_extension(&path)?;
+pub fn dilatation(img: &Buffer, radius: u32) -> Buffer {
+    compute_buffer(img, radius, [u8::MIN; 4],
+        |pix, max| {
+            if max[0] < pix[0] { max[0] = pix[0] }
+            if max[1] < pix[1] { max[1] = pix[1] }
+            if max[2] < pix[2] { max[2] = pix[2] }
+            if max[3] < pix[3] { max[3] = pix[3] }
+        },
+        |col, max| {
+            if max[0] < col[0] { max[0] = col[0] }
+            if max[1] < col[1] { max[1] = col[1] }
+            if max[2] < col[2] { max[2] = col[2] }
+            if max[3] < col[3] { max[3] = col[3] }
+        },
+        |max, _| max
+    )
+}
 
-    // prevent string realloc
-    let mut new_path = String::with_capacity(file_stem.len() + file_name_add.len() + extension.len());
+pub fn median(img: &Buffer, radius: u32) -> Buffer {
+    let capacity = (radius * 2 + 1).pow(2) as usize;
+    let accumulator = Vec::with_capacity(capacity);
 
-    new_path.push_str(file_stem.to_str().unwrap());
-    new_path.push_str(file_name_add);
-    new_path.push_str(extension.to_str().unwrap());
-
-    let base_path = "images";
-    let mut to_save = PathBuf::with_capacity(base_path.len() + new_path.len());
-
-    to_save.push(base_path);
-    to_save.push(new_path);
-
-    Ok(to_save)
+    compute_buffer(img, radius, accumulator,
+        |pix, vec| {
+            let brightness = pix[0] / 3 + pix[1] / 3 + pix[2] / 3;
+            vec.push((brightness, *pix));
+        },
+        |col, vec| {
+            vec.extend(col);
+        },
+        |mut vec, neighbours| {
+            vec.sort_by(|(lhs, _), (rhs, _)| lhs.cmp(rhs));
+            vec[(neighbours / 2) as usize].1
+        }
+    )
 }
 
 fn compute_buffer<T>(
-    img: DynamicImage,
+    img: &Buffer,
     radius: u32,
-    accumulator: [T; 4],
-    reduce: fn(&[u8; 4], &mut [T; 4]),
-    concat: fn(&[T; 4], &mut [T; 4]),
-    average: fn([T; 4], u32) -> [u8; 4],
-) -> ImageBuffer<Rgba<u8>, Vec<u8>> where T: Copy {
+    accumulator: T,
+    reduce: fn(&[u8; 4], &mut T),
+    concat: fn(&T, &mut T),
+    average: fn(T, u32) -> [u8; 4],
+) -> Buffer where T: Clone {
     let width = img.width();
     let height = img.height();
     let mut buffer = image::ImageBuffer::new(width, height);
     let mut partial_blur = std::collections::VecDeque::with_capacity(radius as usize * 2 + 2);
 
     for y in 0..height {
-        let y_max = y.saturating_add(radius + 1).min(height);
+        let y_max = y.saturating_add(radius + 1).min(height - 1);
         let y_min = y.saturating_sub(radius);
         partial_blur.clear();
 
         // init partial blur
         for neighbour_x in 0..=radius {
-            let mut acc = accumulator;
+            let mut acc = accumulator.clone();
 
             for neighbour_y in y_min..y_max {
                 let pix = &img.get_pixel(neighbour_x, neighbour_y).0;
@@ -161,7 +219,7 @@ fn compute_buffer<T>(
 
         // compute every Pixels
         for x in 0..width {
-            let mut acc = accumulator;
+            let mut acc = accumulator.clone();
             let neighbours = (y_max - y_min) * partial_blur.len() as u32;
 
             for col in &partial_blur {
@@ -174,7 +232,7 @@ fn compute_buffer<T>(
             // compute next partial blur row
             let x_target = x.saturating_add(radius + 1);
             if x_target < width {
-                let mut acc = accumulator;
+                let mut acc = accumulator.clone();
 
                 for neighbour_y in y_min..y_max {
                     let pix = &img.get_pixel(x_target, neighbour_y).0;
@@ -191,29 +249,4 @@ fn compute_buffer<T>(
     }
 
     buffer
-}
-
-#[cfg(test)]
-mod tests {
-    use std::{error::Error, path::PathBuf};
-
-    #[test]
-    fn test_flou_moyen() -> Result<(), Box<dyn Error>> {
-        let start = std::time::Instant::now();
-        super::flou_moyen(PathBuf::from("images/lena.jpg"), 2)?;
-
-        let elapsed = start.elapsed().as_millis();
-        println!("flou_moyen: {} ms", elapsed);
-        Ok(())
-    }
-
-    #[test]
-    fn test_erosion() -> Result<(), Box<dyn Error>> {
-        let start = std::time::Instant::now();
-        super::erosion(PathBuf::from("images/lena.jpg"))?;
-
-        let elapsed = start.elapsed().as_millis();
-        println!("erosion: {} ms", elapsed);
-        Ok(())
-    }
 }
