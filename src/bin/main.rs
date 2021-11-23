@@ -3,14 +3,13 @@
 #[macro_use]
 extern crate rocket;
 
-use std::error::Error;
 use std::path::{Path, PathBuf};
 use rocket::data::Data;
 use rocket::fs::{FileServer, NamedFile};
 use rocket::response::status::{self, NotFound};
 use rocket::http::ContentType;
 
-use multy::filter::{self, Algorithms};
+use multy::filter::{run_algo, Algorithms};
 use multy::utils;
 
 #[get("/<file..>")]
@@ -38,22 +37,16 @@ async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, 
     let algo = Algorithms::get_algo(&algo_name);
 
     let path = path.ok_or_else(|| NotFound(String::from("Could not save file")))?;
-    let path = match filter::run_algo(path, algo, algo_name) {
-        Err(e) => Err(NotFound(e.get_error_string())),
-        Ok(path) => Ok(path),
-    }?;
-
+    let path = run_algo(path, algo, algo_name).map_err(|e| NotFound(e.get_error_string()))?;
     NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
 }
 
 #[rocket::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> Result<(), rocket::Error> {
     rocket::build()
         .mount("/public", FileServer::from("images"))
         .mount("/showimages", routes![files])
         .mount("/", routes![index, save, apply])
         .launch()
-        .await?;
-
-    Ok(())
+        .await
 }

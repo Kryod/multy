@@ -101,7 +101,7 @@ pub fn optimized_blur(img: &Buffer, radius: u32) -> Buffer {
         }
     }
 
-    let mut buffer = image::ImageBuffer::new(width, height);
+    let mut buffer = Buffer::new(width, height);
 
     for y in 0..height {
         let y_max = y.saturating_add(radius).min(height - 1);
