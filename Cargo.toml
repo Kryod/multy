@@ -10,3 +10,8 @@ rocket_contrib = "0.4.10"
 rocket-multipart-form-data =  "0.10.0"
 rand = "0.8.4"
 image = "0.23.14"
+serde = { version = "1.0.130", features = ["derive"] }
+
+[dependencies.rocket_dyn_templates]
+version = "0.1.0-rc.1"
+features = ["tera"]

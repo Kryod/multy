@@ -56,7 +56,7 @@ pub fn save_image(mut multipart_form_data: MultipartFormData) -> (status::Accept
             }
         };
 
-        let save_path = Path::new("images/").join(file_name);
+        let save_path = Path::new("static/images/").join(file_name);
 
         match File::create(&save_path) {
             Ok(_) => println!("created path"),

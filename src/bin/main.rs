@@ -9,12 +9,14 @@ use rocket::fs::{FileServer, NamedFile};
 use rocket::response::status::{self, NotFound};
 use rocket::http::ContentType;
 
-use multy::filter::{run_algo, Algorithms};
+use rocket_dyn_templates::Template;
+
+use multy::filter::{self, Algorithms};
 use multy::utils;
 
 #[get("/<file..>")]
 async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
-    let path = Path::new("images/").join(file);
+    let path = Path::new("static/images/").join(file);
     NamedFile::open(&path).await.map_err(|_| NotFound(format!("Bad path: {:?}", path)))
 }
 
@@ -37,14 +39,32 @@ async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, 
     let algo = Algorithms::get_algo(&algo_name);
 
     let path = path.ok_or_else(|| NotFound(String::from("Could not save file")))?;
-    let path = run_algo(path, algo, algo_name).map_err(|e| NotFound(e.get_error_string()))?;
+    let path = filter::run_algo(path, algo, algo_name).map_err(|e| NotFound(e.get_error_string()))?;
     NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
+}
+
+#[get("/")]
+fn index_public() -> Template {
+    #[derive(serde::Serialize)]
+    struct Data { images: Vec<String> }
+    let mut vec = Vec::with_capacity(10);
+
+    for entry in std::fs::read_dir("static/images").unwrap() {
+        let full_name = entry.unwrap().file_name();
+        vec.push(full_name.to_str().unwrap().to_owned());
+    }
+
+    Template::render("index", Data {
+        images: vec,
+    })
 }
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
     rocket::build()
-        .mount("/public", FileServer::from("images"))
+        .mount("/public", FileServer::from("static/images"))
+        .mount("/public", routes![index_public])
+            .attach(Template::fairing())
         .mount("/showimages", routes![files])
         .mount("/", routes![index, save, apply])
         .launch()
