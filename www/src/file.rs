@@ -1,5 +1,5 @@
-use image::ImageError;
 use std::{fmt::Display, error::Error, ffi::OsStr, path::Path, path::PathBuf};
+use filter::ImageError;
 
 #[derive(Debug)]
 pub enum FilterError {
@@ -17,13 +17,13 @@ impl FilterError {
         }
     }
 
-    pub fn get_ref_error_string(&self) -> &'_ str {
-        match self {
-            FilterError::DestImgError(ref s) |
-            FilterError::ImageError(ref s) |
-            FilterError::OtherError(ref s) => s,
-        }
-    }
+    // pub fn get_ref_error_string(&self) -> &'_ str {
+    //     match self {
+    //         FilterError::DestImgError(ref s) |
+    //         FilterError::ImageError(ref s) |
+    //         FilterError::OtherError(ref s) => s,
+    //     }
+    // }
 }
 
 impl From<ImageError> for FilterError {

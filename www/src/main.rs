@@ -1,24 +1,18 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
+mod utils;
+mod file;
+
 #[macro_use]
 extern crate rocket;
 
-use std::path::{Path, PathBuf};
 use rocket::data::Data;
 use rocket::fs::{FileServer, NamedFile};
 use rocket::response::status::{self, NotFound};
 use rocket::http::ContentType;
 
 use rocket_dyn_templates::Template;
-
-use multy::filter::{self, Algorithms};
-use multy::utils;
-
-#[get("/<file..>")]
-async fn files(file: PathBuf) -> Result<NamedFile, NotFound<String>> {
-    let path = Path::new("static/images/").join(file);
-    NamedFile::open(&path).await.map_err(|_| NotFound(format!("Bad path: {:?}", path)))
-}
+use filter::{self, Algorithms};
 
 #[get("/")]
 fn index() -> &'static str {
@@ -38,9 +32,13 @@ async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, 
     let (_, path, algo_name) = utils::save_image(multipart_form_data);
     let algo = Algorithms::get_algo(&algo_name);
 
-    let path = path.ok_or_else(|| NotFound(String::from("Could not save file")))?;
-    let path = filter::run_algo(path, algo, algo_name).map_err(|e| NotFound(e.get_error_string()))?;
-    NamedFile::open(&path).await.map_err(|e| NotFound(e.to_string()))
+    let source = path.ok_or_else(|| NotFound(String::from("Could not save file")))?;
+    let dest = file::get_new_image_file(&source, &algo_name)
+        .map_err(|e| NotFound(e.get_error_string()))?;
+
+
+    filter::run_algo(&source, &dest, algo).map_err(|e| NotFound(e.to_string()))?;
+    NamedFile::open(&dest).await.map_err(|e| NotFound(e.to_string()))
 }
 
 #[get("/")]
@@ -64,9 +62,8 @@ async fn main() -> Result<(), rocket::Error> {
     rocket::build()
         .mount("/public", FileServer::from("static/images"))
         .mount("/public", routes![index_public])
-            .attach(Template::fairing())
-        .mount("/showimages", routes![files])
         .mount("/", routes![index, save, apply])
+        .attach(Template::fairing())
         .launch()
         .await
 }
