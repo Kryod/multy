@@ -3,17 +3,17 @@ use filter::ImageError;
 
 #[derive(Debug)]
 pub enum FilterError {
-    DestImgError(String),
-    ImageError(String),
-    OtherError(String),
+    DestImg(String),
+    Image(String),
+    Other(String),
 }
 
 impl FilterError {
     pub fn get_error_string(self) -> String {
         match self {
-            FilterError::DestImgError(s) |
-            FilterError::ImageError(s) |
-            FilterError::OtherError(s) => s,
+            FilterError::DestImg(s) |
+            FilterError::Image(s) |
+            FilterError::Other(s) => s,
         }
     }
 
@@ -29,12 +29,12 @@ impl FilterError {
 impl From<ImageError> for FilterError {
     fn from(err: ImageError) -> Self {
         match err {
-            ImageError::Decoding(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Encoding(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Parameter(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Limits(e) => FilterError::ImageError(e.to_string()),
-            ImageError::Unsupported(e) => FilterError::ImageError(e.to_string()),
-            ImageError::IoError(e) => FilterError::ImageError(e.to_string()),
+            ImageError::Decoding(e) => FilterError::Image(e.to_string()),
+            ImageError::Encoding(e) => FilterError::Image(e.to_string()),
+            ImageError::Parameter(e) => FilterError::Image(e.to_string()),
+            ImageError::Limits(e) => FilterError::Image(e.to_string()),
+            ImageError::Unsupported(e) => FilterError::Image(e.to_string()),
+            ImageError::IoError(e) => FilterError::Image(e.to_string()),
         }
     }
 }
@@ -53,9 +53,9 @@ pub fn orig_filename_extension(path: &Path) -> Result<(&OsStr, &OsStr), FilterEr
 
     match (file_stem, extension) {
         (Some(file_stem), Some(extension)) => Ok((file_stem, extension)),
-        (None, Some(_)) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have a filename", path))),
-        (Some(_), None) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have an extension", path))),
-        (None, None) => Err(FilterError::DestImgError(format!("Path: {:?}, doesn't have any filename or extension", path))),
+        (None, Some(_)) => Err(FilterError::DestImg(format!("Path: {:?}, doesn't have a filename", path))),
+        (Some(_), None) => Err(FilterError::DestImg(format!("Path: {:?}, doesn't have an extension", path))),
+        (None, None) => Err(FilterError::DestImg(format!("Path: {:?}, doesn't have any filename or extension", path))),
     }
 }
 
@@ -66,11 +66,11 @@ pub fn get_new_image_file(path: &Path, file_name_add: &str) -> Result<PathBuf, F
     let mut new_path = String::with_capacity(file_stem.len() + file_name_add.len() + extension.len());
 
     new_path.push_str(file_stem.to_str().ok_or_else(||
-        FilterError::OtherError(String::from("Failed to extract str from file_stem"))
+        FilterError::Other(String::from("Failed to extract str from file_stem"))
     )?);
     new_path.push_str(file_name_add);
     new_path.push_str(extension.to_str().ok_or_else(||
-        FilterError::OtherError(String::from("Failed to extract str from extension"))
+        FilterError::Other(String::from("Failed to extract str from extension"))
     )?);
 
     let base_path = "static/images";

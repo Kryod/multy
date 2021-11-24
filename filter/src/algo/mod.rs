@@ -4,7 +4,7 @@ pub mod erode;
 pub mod blur;
 
 use image::{ImageBuffer, Rgba};
-use std::path::PathBuf;
+use std::path::Path;
 
 pub type Buffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
 
@@ -26,7 +26,7 @@ impl Algorithms {
     }
 }
 
-pub fn run_algo(source: &PathBuf, dest: &PathBuf, algo: Algorithms) -> Result<(), image::ImageError> {
+pub fn run_algo(source: &Path, dest: &Path, algo: Algorithms) -> Result<(), image::ImageError> {
     let img = image::open(source)?.into_rgba8();
     let radius = 2;
 
