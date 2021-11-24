@@ -31,7 +31,7 @@ pub fn run_algo(source: &Path, dest: &Path, algo: Algorithms) -> Result<(), imag
     let radius = 2;
 
     let buffer = match algo {
-        Algorithms::FlouMoyen => blur::flou_moyen(&img, radius),
+        Algorithms::FlouMoyen => blur::blur(&img, radius),
         Algorithms::Erosion => erode::erode(&img, radius),
         Algorithms::Dilatation => dilate::dilate(&img, radius),
         Algorithms::Median => median_blur::median_blur(&img, radius),

@@ -7,8 +7,7 @@ Cargo.lock
 # macOS
 .DS_Store
 
+static/images/*blur*
 static/images/*erode*
 static/images/*dilate*
-static/images/*flou_moyen*
 static/images/*median_blur*
-static/images/*optimized_blur*
