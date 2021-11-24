@@ -7,7 +7,7 @@ use rocket::data::Data;
 use rocket::http::ContentType;
 use rocket::response::status;
 use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use rand::{self, Rng};
 use rocket_multipart_form_data::{mime, MultipartFormDataOptions, MultipartFormData, MultipartFormDataField};
 
 pub async fn get_multipart_form_data(content_type: &ContentType, data: Data<'_>) -> MultipartFormData {
@@ -51,7 +51,7 @@ pub fn save_image(mut multipart_form_data: MultipartFormData) -> (status::Accept
         let file_name = match file_name {
             Some(name) => name,
             None => {
-                let mut rng = thread_rng();
+                let mut rng = rand::thread_rng();
                 (0..30).map(|_| rng.sample(Alphanumeric) as char).collect()
             }
         };

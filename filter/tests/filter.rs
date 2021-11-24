@@ -1,25 +1,23 @@
 use std::{error::Error, path::PathBuf};
-use multy::file::get_new_image_file;
-use multy::filter::{
-    flou_moyen, optimized_blur, erosion, dilatation, median,
+use filter::{
+    flou_moyen, optimized_blur, erode, dilate, median_blur,
     Buffer
 };
 
 const RADIUS: u32 = 2;
-const IMG: &str = "static/images/lena.jpg";
+const IMG: &str = "../static/images/lena";
+const EXT: &str = "jpg";
 
 fn global_test(algo_name: &str, algo: fn(&Buffer, u32) -> Buffer) -> Result<(), Box<dyn Error>> {
-    let fname = format!("_{}.", algo_name);
-    let path = PathBuf::from(IMG);
-
-    let dest = get_new_image_file(&path, &fname)?;
-    let img = image::open(path)?.into_rgba8();
+    let source = PathBuf::from(format!("{}.{}", IMG, EXT));
+    let img = image::open(&source)?.into_rgba8();
 
     let start = std::time::Instant::now();
     let buffer = algo(&img, RADIUS);
     let elapsed = start.elapsed().as_millis();
     println!("{}: {} ms", algo_name, elapsed);
 
+    let dest = PathBuf::from(format!("{}_{}.{}", IMG, algo_name, EXT));
     buffer.save(&dest)?;
     Ok(())
 }
@@ -36,15 +34,15 @@ fn test_flou_moyen_opt() -> Result<(), Box<dyn Error>> {
 
 #[test]
 fn test_erosion() -> Result<(), Box<dyn Error>> {
-    global_test("erosion", erosion)
+    global_test("erode", erode)
 }
 
 #[test]
 fn test_dilatation() -> Result<(), Box<dyn Error>> {
-    global_test("dilatation", dilatation)
+    global_test("dilate", dilate)
 }
 
 #[test]
 fn test_median() -> Result<(), Box<dyn Error>> {
-    global_test("median", median)
+    global_test("median_blur", median_blur)
 }
