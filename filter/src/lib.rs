@@ -3,10 +3,10 @@ mod algo;
 
 pub use algo::{
     Buffer, Algorithms, run_algo,
-    blur::{flou_moyen, optimized_blur},
     median_blur::median_blur,
     dilate::dilate,
     erode::erode,
+    blur::blur,
 };
 
 // reexport for imgerror

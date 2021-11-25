@@ -1,29 +1,6 @@
-use super::{Buffer, compute_buffer};
+use super::Buffer;
 
-pub fn flou_moyen(img: &Buffer, radius: u32) -> Buffer {
-    compute_buffer(img, radius, [0; 4],
-        |pix, sum| {
-            sum[0] += pix[0] as u32;
-            sum[1] += pix[1] as u32;
-            sum[2] += pix[2] as u32;
-            sum[3] += pix[3] as u32;
-        },
-        |col, sum| {
-            sum[0] += col[0];
-            sum[1] += col[1];
-            sum[2] += col[2];
-            sum[3] += col[3];
-        },
-        |sum, neighbours| [
-            (sum[0] / neighbours) as u8,
-            (sum[1] / neighbours) as u8,
-            (sum[2] / neighbours) as u8,
-            (sum[3] / neighbours) as u8,
-        ],
-    )
-}
-
-pub fn optimized_blur(img: &Buffer, radius: u32) -> Buffer {
+pub fn blur(img: &Buffer, radius: u32) -> Buffer {
     use crate::pixel_ops::{add_pix, sub_pix, pix_as_u32};
 
     let (width, height) = img.dimensions();

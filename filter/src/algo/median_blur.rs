@@ -1,20 +1,34 @@
-use super::{Buffer, compute_buffer};
+use super::Buffer;
 
 pub fn median_blur(img: &Buffer, radius: u32) -> Buffer {
+    let (width, height) = img.dimensions();
     let capacity = (radius * 2 + 1).pow(2) as usize;
-    let accumulator = Vec::with_capacity(capacity);
+    let mut container = Vec::with_capacity(capacity);
+    let mut buffer = Buffer::new(width, height);
 
-    compute_buffer(img, radius, accumulator,
-        |pix, vec| {
-            let brightness = pix[0] / 3 + pix[1] / 3 + pix[2] / 3;
-            vec.push((brightness, *pix));
-        },
-        |col, vec| {
-            vec.extend(col);
-        },
-        |mut vec, neighbours| {
-            vec.sort_by(|(lhs, _), (rhs, _)| lhs.cmp(rhs));
-            vec[(neighbours / 2) as usize].1
+    for y in 0..height {
+        let y_max = y.saturating_add(radius + 1).min(height - 1);
+        let y_min = y.saturating_sub(radius);
+
+        for x in 0..width {
+            let x_max = x.saturating_add(radius + 1).min(width - 1);
+            let x_min = x.saturating_sub(radius);
+            container.clear();
+
+            for neighbour_y in y_min..y_max {
+                for neighbour_x in x_min..x_max {
+                    let pix = img.get_pixel(neighbour_x, neighbour_y).0;
+                    let br = pix[0] / 3 + pix[1] / 3 + pix[2] / 3;
+
+                    container.push((br, pix));
+                }
+            }
+
+            container.sort_by(|(lhs, _), (rhs, _)| lhs.cmp(rhs));
+            let median = container[container.len() / 2].1;
+            buffer.put_pixel(x, y, image::Rgba(median));
         }
-    )
+    }
+
+    buffer
 }
