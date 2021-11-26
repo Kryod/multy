@@ -1,8 +1,8 @@
 use std::{error::Error, path::PathBuf};
 use filter::{self, Buffer};
 
-const RADIUS: u32 = 2;
-const IMG: &str = "../static/images/lena";
+const RADIUS: u32 = 1;
+const IMG: &str = "../static/images/lena_really_noise";
 const EXT: &str = "jpg";
 
 fn global_test(algo_name: &str, algo: fn(&Buffer, u32) -> Buffer) -> Result<(), Box<dyn Error>> {

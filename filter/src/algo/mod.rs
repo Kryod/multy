@@ -58,7 +58,7 @@ fn compute_buffer<T>(
     let mut partial_blur = std::collections::VecDeque::with_capacity(radius as usize * 2 + 2);
 
     for y in 0..height {
-        let y_max = y.saturating_add(radius + 1).min(height - 1);
+        let y_max = y.saturating_add(radius + 1).min(height);
         let y_min = y.saturating_sub(radius);
         partial_blur.clear();
 
