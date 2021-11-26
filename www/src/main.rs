@@ -36,7 +36,6 @@ async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, 
     let dest = file::get_new_image_file(&source, &algo_name)
         .map_err(|e| NotFound(e.get_error_string()))?;
 
-
     filter::run_algo(&source, &dest, algo).map_err(|e| NotFound(e.to_string()))?;
     NamedFile::open(&dest).await.map_err(|e| NotFound(e.to_string()))
 }
@@ -61,6 +60,7 @@ fn index_public() -> Template {
 async fn main() -> Result<(), rocket::Error> {
     rocket::build()
         .mount("/public", FileServer::from("static/images"))
+        .mount("/style", FileServer::from("static/style"))
         .mount("/public", routes![index_public])
         .mount("/", routes![index, save, apply])
         .attach(Template::fairing())

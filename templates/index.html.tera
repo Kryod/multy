@@ -3,7 +3,11 @@
 </head>
 
 <body>
+    <div id="bloc">
 {% for img in images %}
-    <a href="public/{{ img }}">{{ img }}</a><br />
+        <a href="public/{{ img }}"><span class="link">{{ img }}</span></a>
 {% endfor %}
+    </div>
+
+    <link rel="stylesheet" type="text/css" href="style/show_image.css" />
 </body>

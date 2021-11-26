@@ -19,25 +19,21 @@ pub async fn get_multipart_form_data(content_type: &ContentType, data: Data<'_>)
 pub fn save_image(mut multipart_form_data: MultipartFormData) -> (status::Accepted<String>, Option<PathBuf>, String) {
     let algo = multipart_form_data.texts.remove("algorithm");
     let photo = multipart_form_data.files.remove("photo");
+    let default_algo = String::from("flou_moyen");
 
     let algorithm = match algo {
-        None => String::from("flou_moyen"),
-        Some(mut algo) => {
-            // drain the first element, assuming there are at least one
-            let tf = match algo.drain(..).next() {
-                Some(field) => field,
-                None => return (
-                    status::Accepted(Some(String::from("missing element under \"algorithm\" field"))),
-                    None, String::from("<Unknown>")
-                ),
-            };
-            tf.text
+        None => default_algo,
+        Some(algo) => {
+            if let Some(field) = algo.into_iter().next() {
+                field.text
+            } else {
+                default_algo
+            }
         }
     };
 
-    if let Some(mut file_fields) = photo {
-        // Because we only put one "photo" field to the allowed_fields, the max length of this file_fields is 1.
-        let file_field = match file_fields.drain(..).next() {
+    if let Some(file_fields) = photo {
+        let file_field = match file_fields.into_iter().next() {
             Some(field) => field,
             None => return (
                 status::Accepted(Some(String::from("missing element under \"photo\" field"))),
