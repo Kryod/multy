@@ -10,21 +10,22 @@ use std::path::Path;
 pub type Buffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
 
 pub enum Algorithms {
-    FlouMoyen,
-    Erosion,
-    Dilatation,
-    Median,
+    Blur,
+    Dilate,
+    Erode,
+    MedianBlur,
     MinMax,
 }
 
 impl Algorithms {
-    pub fn get_algo(algo_name: &str) -> Self {
+    pub fn get_algo(algo_name: &str) -> Option<Self> {
         match algo_name {
-            "erosion" => Self::Erosion,
-            "dilatation" => Self::Dilatation,
-            "median" => Self::Median,
-            "min_max" => Self::MinMax,
-            _ /* flou_moyen */ => Self::FlouMoyen,
+            "dilate" => Some(Self::Dilate),
+            "erode" => Some(Self::Erode),
+            "median_blur" => Some(Self::MedianBlur),
+            "min_max" => Some(Self::MinMax),
+            "blur" => Some(Self::Blur),
+            _ => None,
         }
     }
 }
@@ -34,10 +35,10 @@ pub fn run_algo(source: &Path, dest: &Path, algo: Algorithms) -> Result<(), imag
     let radius = 2;
 
     let buffer = match algo {
-        Algorithms::FlouMoyen => blur::blur(&img, radius),
-        Algorithms::Erosion => erode::erode(&img, radius),
-        Algorithms::Dilatation => dilate::dilate(&img, radius),
-        Algorithms::Median => median_blur::median_blur(&img, radius),
+        Algorithms::Blur => blur::blur(&img, radius),
+        Algorithms::Dilate => dilate::dilate(&img, radius),
+        Algorithms::Erode => erode::erode(&img, radius),
+        Algorithms::MedianBlur => median_blur::median_blur(&img, radius),
         Algorithms::MinMax => min_max::min_max(&img, radius),
     };
 

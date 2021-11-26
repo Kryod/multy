@@ -8,11 +8,13 @@ use rocket::http::ContentType;
 use rocket::response::status;
 use rand::distributions::Alphanumeric;
 use rand::{self, Rng};
-use rocket_multipart_form_data::{mime, MultipartFormDataOptions, MultipartFormData, MultipartFormDataField};
+use rocket_multipart_form_data::{MultipartFormDataOptions, MultipartFormData, MultipartFormDataField};
 
 pub async fn get_multipart_form_data(content_type: &ContentType, data: Data<'_>) -> MultipartFormData {
     let mut options = MultipartFormDataOptions::new();
-    options.allowed_fields.push(MultipartFormDataField::file("photo").content_type_by_string(Some(mime::IMAGE_STAR)).unwrap());
+    options.allowed_fields.push(MultipartFormDataField::file("photo"));
+    options.allowed_fields.push(MultipartFormDataField::text("algorithm"));
+
     MultipartFormData::parse(content_type, data, options).await.unwrap()
 }
 

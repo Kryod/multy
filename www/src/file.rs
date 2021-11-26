@@ -63,12 +63,14 @@ pub fn get_new_image_file(path: &Path, file_name_add: &str) -> Result<PathBuf, F
     let (file_stem, extension) = orig_filename_extension(path)?;
 
     // prevent string realloc
-    let mut new_path = String::with_capacity(file_stem.len() + file_name_add.len() + extension.len());
+    let mut new_path = String::with_capacity(file_stem.len() + file_name_add.len() + extension.len() + 2);
 
     new_path.push_str(file_stem.to_str().ok_or_else(||
         FilterError::Other(String::from("Failed to extract str from file_stem"))
     )?);
+    new_path.push('_');
     new_path.push_str(file_name_add);
+    new_path.push('.');
     new_path.push_str(extension.to_str().ok_or_else(||
         FilterError::Other(String::from("Failed to extract str from extension"))
     )?);
