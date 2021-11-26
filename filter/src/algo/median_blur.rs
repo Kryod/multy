@@ -7,11 +7,11 @@ pub fn median_blur(img: &Buffer, radius: u32) -> Buffer {
     let mut buffer = Buffer::new(width, height);
 
     for y in 0..height {
-        let y_max = y.saturating_add(radius + 1).min(height - 1);
+        let y_max = y.saturating_add(radius + 1).min(height);
         let y_min = y.saturating_sub(radius);
 
         for x in 0..width {
-            let x_max = x.saturating_add(radius + 1).min(width - 1);
+            let x_max = x.saturating_add(radius + 1).min(width);
             let x_min = x.saturating_sub(radius);
             container.clear();
 
