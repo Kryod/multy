@@ -44,3 +44,12 @@ fn median_blur(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
     b.iter(|| filter::median_blur(&img, RADIUS));
     Ok(())
 }
+
+#[bench]
+fn min_max(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
+    let path = PathBuf::from(IMG);
+    let img = image::open(path)?.into_rgba8();
+
+    b.iter(|| filter::min_max(&img, RADIUS));
+    Ok(())
+}

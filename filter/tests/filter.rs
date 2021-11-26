@@ -38,3 +38,8 @@ fn dilate() -> Result<(), Box<dyn Error>> {
 fn median_blur() -> Result<(), Box<dyn Error>> {
     global_test("median_blur", filter::median_blur)
 }
+
+#[test]
+fn min_max() -> Result<(), Box<dyn Error>> {
+    global_test("min_max", filter::min_max)
+}

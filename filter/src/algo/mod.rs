@@ -1,4 +1,5 @@
 pub mod median_blur;
+pub mod min_max;
 pub mod dilate;
 pub mod erode;
 pub mod blur;
@@ -13,6 +14,7 @@ pub enum Algorithms {
     Erosion,
     Dilatation,
     Median,
+    MinMax,
 }
 
 impl Algorithms {
@@ -21,6 +23,7 @@ impl Algorithms {
             "erosion" => Self::Erosion,
             "dilatation" => Self::Dilatation,
             "median" => Self::Median,
+            "min_max" => Self::MinMax,
             _ /* flou_moyen */ => Self::FlouMoyen,
         }
     }
@@ -35,6 +38,7 @@ pub fn run_algo(source: &Path, dest: &Path, algo: Algorithms) -> Result<(), imag
         Algorithms::Erosion => erode::erode(&img, radius),
         Algorithms::Dilatation => dilate::dilate(&img, radius),
         Algorithms::Median => median_blur::median_blur(&img, radius),
+        Algorithms::MinMax => min_max::min_max(&img, radius),
     };
 
     buffer.save(&dest)
