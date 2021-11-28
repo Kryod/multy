@@ -1,19 +1,28 @@
 extern crate rocket_multipart_form_data;
 
-use std::fs;
-use std::fs::File;
-use std::path::*;
+use std::path::{
+    Path, PathBuf,
+};
+use std::fs::{
+    self, File,
+};
 use rocket::data::Data;
 use rocket::http::ContentType;
 use rocket::response::status;
-use rand::distributions::Alphanumeric;
-use rand::{self, Rng};
-use rocket_multipart_form_data::{MultipartFormDataOptions, MultipartFormData, MultipartFormDataField};
+use rand::{
+    self, Rng, distributions::Alphanumeric,
+};
+use rocket_multipart_form_data::{
+    MultipartFormDataOptions, MultipartFormData, MultipartFormDataField
+};
 
-pub async fn get_multipart_form_data(content_type: &ContentType, data: Data<'_>) -> MultipartFormData {
+pub async fn get_multipart_form_data(content_type: &ContentType, data: Data<'_>, fields: Vec<AllowedField<'_>>) -> MultipartFormData {
     let mut options = MultipartFormDataOptions::new();
-    options.allowed_fields.push(MultipartFormDataField::file("photo"));
-    options.allowed_fields.push(MultipartFormDataField::text("algorithm"));
+
+    for field in fields {
+        let multipart: MultipartFormDataField = field.into();
+        options.allowed_fields.push(multipart);
+    }
 
     MultipartFormData::parse(content_type, data, options).await.unwrap()
 }
@@ -67,5 +76,19 @@ pub fn save_image(mut multipart_form_data: MultipartFormData) -> (status::Accept
         }
     } else {
         (status::Accepted(Some(format!("An Error occured while parsing: {:?}", photo))), None, algorithm)
+    }
+}
+
+pub enum AllowedField<'a>{
+    File(&'a str),
+    Text(&'a str),
+}
+
+impl<'a> From<AllowedField<'a>> for MultipartFormDataField<'a> {
+    fn from(field: AllowedField<'a>) -> Self {
+        match field {
+            AllowedField::File(field_name) => MultipartFormDataField::file(field_name),
+            AllowedField::Text(field_name) => MultipartFormDataField::text(field_name),
+        }
     }
 }
