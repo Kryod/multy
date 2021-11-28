@@ -21,16 +21,25 @@ fn index() -> &'static str {
 
 #[post("/save", data = "<data>")]
 async fn save(content_type: &ContentType, data: Data<'_>) -> status::Accepted<String> {
-    let multipart_form_data = utils::get_multipart_form_data(content_type, data).await;
-    let (status, _, _) = utils::save_image(multipart_form_data);
-    status
+    let fields = vec![
+        utils::AllowedField::Text("algorithm"),
+        utils::AllowedField::File("photo"),
+    ];
+
+    let multipart_form_data = utils::get_multipart_form_data(content_type, data, fields).await;
+    utils::save_image(multipart_form_data).0
 }
 
 #[post("/apply", data = "<data>")]
 async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, NotFound<String>> {
-    let multipart_form_data = utils::get_multipart_form_data(content_type, data).await;
+    let fields = vec![
+        utils::AllowedField::Text("algorithm"),
+        utils::AllowedField::File("photo"),
+    ];
+
+    let multipart_form_data = utils::get_multipart_form_data(content_type, data, fields).await;
     let (_, path, algo_name) = utils::save_image(multipart_form_data);
-    let algo = Algorithms::get_algo(&algo_name).ok_or(
+    let algo = Algorithms::get_algo(&algo_name).ok_or_else(||
         NotFound(format!("Unknown algorithm: {}", algo_name))
     )?;
 
