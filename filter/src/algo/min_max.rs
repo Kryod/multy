@@ -1,8 +1,7 @@
+use crate::pixel_ops;
 use super::Buffer;
 
 pub fn min_max(img: &Buffer, radius: u32) -> Buffer {
-    use crate::pixel_ops::{min_pix, max_pix};
-
     let (width, height) = img.dimensions();
     let mut buffer = Buffer::new(width, height);
 
@@ -23,8 +22,8 @@ pub fn min_max(img: &Buffer, radius: u32) -> Buffer {
                     }
 
                     let pix = img.get_pixel(neighbour_x, neighbour_y).0;
-                    min_pix(&pix, &mut min);
-                    max_pix(&pix, &mut max);
+                    pixel_ops::min_pix(&pix, &mut min);
+                    pixel_ops::max_pix(&pix, &mut max);
                 }
             }
 
