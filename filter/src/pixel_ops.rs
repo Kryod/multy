@@ -27,3 +27,19 @@ pub fn sub_pix(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
         lhs[3] - rhs[3],
     ]
 }
+
+#[inline]
+pub fn min_pix(pix: &[u8; 4], min: &mut [u8; 4]) {
+    min[0] = if min[0] < pix[0] { min[0] } else { pix[0] };
+    min[1] = if min[1] < pix[1] { min[1] } else { pix[1] };
+    min[2] = if min[2] < pix[2] { min[2] } else { pix[2] };
+    min[3] = if min[3] < pix[3] { min[3] } else { pix[3] };
+}
+
+#[inline]
+pub fn max_pix(pix: &[u8; 4], max: &mut [u8; 4]) {
+    max[0] = if max[0] < pix[0] { pix[0] } else { max[0] };
+    max[1] = if max[1] < pix[1] { pix[1] } else { max[1] };
+    max[2] = if max[2] < pix[2] { pix[2] } else { max[2] };
+    max[3] = if max[3] < pix[3] { pix[3] } else { max[3] };
+}
