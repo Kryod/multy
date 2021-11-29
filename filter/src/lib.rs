@@ -1,4 +1,4 @@
-mod pixel_ops;
+mod pixel;
 mod algo;
 
 pub use algo::{

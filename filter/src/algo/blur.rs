@@ -1,36 +1,35 @@
 use super::Buffer;
+use crate::pixel;
 
 pub fn blur(img: &Buffer, radius: u32) -> Buffer {
-    use crate::pixel_ops::{add_pix, sub_pix, pix_as_u32};
-
     let (width, height) = img.dimensions();
     let mut sum_table = vec![[0; 4]; (width * height) as usize];
 
-    sum_table[0] = pix_as_u32(img.get_pixel(0, 0).0);
+    sum_table[0] = pixel::as_u32(img.get_pixel(0, 0).0);
     for x in 1..width {
-        sum_table[x as usize] = add_pix(
+        sum_table[x as usize] = pixel::add(
             sum_table[x as usize - 1],
-            pix_as_u32(img.get_pixel(x, 0).0)
+            pixel::as_u32(img.get_pixel(x, 0).0)
         );
     }
     for y in 1..height {
-        sum_table[(y * width) as usize] = add_pix(
+        sum_table[(y * width) as usize] = pixel::add(
             sum_table[((y - 1) * width) as usize],
-            pix_as_u32(img.get_pixel(0, y).0)
+            pixel::as_u32(img.get_pixel(0, y).0)
         );
     }
     for y in 1..height {
         for x in 1..width {
             // sum[x,y] = sum[x-1,y] + sum[x,y-1] - sum[x-1,y-1] + img[x,y]
-            sum_table[(x + y * width) as usize] = add_pix(
-                sub_pix(
-                    add_pix(
+            sum_table[(x + y * width) as usize] = pixel::add(
+                pixel::sub(
+                    pixel::add(
                         sum_table[(x - 1 + y * width) as usize],
                         sum_table[(x + (y - 1) * width) as usize]
                     ),
                     sum_table[(x - 1 + (y - 1) * width) as usize]
                 ),
-                pix_as_u32(img.get_pixel(x, y).0)
+                pixel::as_u32(img.get_pixel(x, y).0)
             );
         }
     }

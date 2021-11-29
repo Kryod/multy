@@ -1,5 +1,5 @@
 #[inline]
-pub fn pix_as_u32(pix: [u8; 4]) -> [u32; 4] {
+pub fn as_u32(pix: [u8; 4]) -> [u32; 4] {
     [
         pix[0] as u32,
         pix[1] as u32,
@@ -9,7 +9,7 @@ pub fn pix_as_u32(pix: [u8; 4]) -> [u32; 4] {
 }
 
 #[inline]
-pub fn add_pix(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
+pub fn add(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
     [
         lhs[0] + rhs[0],
         lhs[1] + rhs[1],
@@ -19,7 +19,7 @@ pub fn add_pix(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
 }
 
 #[inline]
-pub fn sub_pix(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
+pub fn sub(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
     [
         lhs[0] - rhs[0],
         lhs[1] - rhs[1],
@@ -29,7 +29,7 @@ pub fn sub_pix(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
 }
 
 #[inline]
-pub fn min_pix(pix: &[u8; 4], min: &mut [u8; 4]) {
+pub fn min(pix: &[u8; 4], min: &mut [u8; 4]) {
     min[0] = if min[0] < pix[0] { min[0] } else { pix[0] };
     min[1] = if min[1] < pix[1] { min[1] } else { pix[1] };
     min[2] = if min[2] < pix[2] { min[2] } else { pix[2] };
@@ -37,7 +37,7 @@ pub fn min_pix(pix: &[u8; 4], min: &mut [u8; 4]) {
 }
 
 #[inline]
-pub fn max_pix(pix: &[u8; 4], max: &mut [u8; 4]) {
+pub fn max(pix: &[u8; 4], max: &mut [u8; 4]) {
     max[0] = if max[0] < pix[0] { pix[0] } else { max[0] };
     max[1] = if max[1] < pix[1] { pix[1] } else { max[1] };
     max[2] = if max[2] < pix[2] { pix[2] } else { max[2] };
