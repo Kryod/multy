@@ -13,6 +13,7 @@ use rocket::http::ContentType;
 
 use rocket_dyn_templates::Template;
 use filter::{self, Algorithms};
+use std::convert::TryFrom;
 
 #[get("/")]
 fn index() -> &'static str {
@@ -39,9 +40,9 @@ async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, 
 
     let multipart_form_data = utils::get_multipart_form_data(content_type, data, fields).await;
     let (_, path, algo_name) = utils::save_image(multipart_form_data);
-    let algo = Algorithms::get_algo(&algo_name).ok_or_else(||
-        NotFound(format!("Unknown algorithm: {}", algo_name))
-    )?;
+    let algo = Algorithms::try_from(algo_name.as_str()).map_err(|e| {
+        NotFound(e)
+    })?;
 
     let source = path.ok_or_else(|| NotFound(String::from("Could not save file")))?;
     let dest = file::get_new_image_file(&source, &algo_name)

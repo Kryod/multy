@@ -5,6 +5,7 @@ pub mod erode;
 pub mod blur;
 
 use image::{ImageBuffer, Rgba};
+use std::convert::TryFrom;
 use std::path::Path;
 
 pub type Buffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
@@ -17,15 +18,17 @@ pub enum Algorithms {
     MinMax,
 }
 
-impl Algorithms {
-    pub fn get_algo(algo_name: &str) -> Option<Self> {
-        match algo_name {
-            "dilate" => Some(Self::Dilate),
-            "erode" => Some(Self::Erode),
-            "median_blur" => Some(Self::MedianBlur),
-            "min_max" => Some(Self::MinMax),
-            "blur" => Some(Self::Blur),
-            _ => None,
+impl TryFrom<&str> for Algorithms {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "dilate" => Ok(Self::Dilate),
+            "erode" => Ok(Self::Erode),
+            "median_blur" => Ok(Self::MedianBlur),
+            "min_max" => Ok(Self::MinMax),
+            "blur" => Ok(Self::Blur),
+            unknown => Err(format!("\"{}\" isn't a valid algorithm name.", unknown)),
         }
     }
 }
