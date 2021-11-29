@@ -7,13 +7,12 @@ mod file;
 extern crate rocket;
 
 use rocket::data::Data;
-use rocket::fs::{FileServer, NamedFile};
-use rocket::response::status::{self, NotFound};
+use rocket::response::status;
 use rocket::http::ContentType;
+use rocket::fs::{FileServer, NamedFile};
 
 use rocket_dyn_templates::Template;
-use filter::{self, Algorithms};
-use std::convert::TryFrom;
+use filter;
 
 #[get("/")]
 fn index() -> &'static str {
@@ -21,35 +20,47 @@ fn index() -> &'static str {
 }
 
 #[post("/save", data = "<data>")]
-async fn save(content_type: &ContentType, data: Data<'_>) -> status::Accepted<String> {
+async fn save(content_type: &ContentType, data: Data<'_>) -> Result<status::Created<String>, status::BadRequest<String>> {
     let fields = vec![
-        utils::AllowedField::Text("algorithm"),
         utils::AllowedField::File("photo"),
     ];
 
-    let multipart_form_data = utils::get_multipart_form_data(content_type, data, fields).await;
-    utils::save_image(multipart_form_data).0
+    let mut multipart_form_data = utils::get_multipart_form_data(content_type, data, fields).await;
+    match utils::save_image(&mut multipart_form_data) {
+        Err(str) => Err(status::BadRequest(Some(str))),
+        Ok(location) => Ok(status::Created::new(
+            location.to_str().unwrap().to_owned()
+        )),
+    }
 }
 
 #[post("/apply", data = "<data>")]
-async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, NotFound<String>> {
+async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, status::BadRequest<String>> {
     let fields = vec![
         utils::AllowedField::Text("algorithm"),
+        utils::AllowedField::Text("radius"),
+        // utils::AllowedField::Text("factor"),
         utils::AllowedField::File("photo"),
     ];
 
-    let multipart_form_data = utils::get_multipart_form_data(content_type, data, fields).await;
-    let (_, path, algo_name) = utils::save_image(multipart_form_data);
-    let algo = Algorithms::try_from(algo_name.as_str()).map_err(|e| {
-        NotFound(e)
-    })?;
+    let mut multipart_form_data = utils::get_multipart_form_data(content_type, data, fields).await;
+    let source = utils::save_image(&mut multipart_form_data).map_err(|e|
+        status::BadRequest(Some(e))
+    )?;
+    let (algo, name) = utils::get_algo(&mut multipart_form_data).map_err(|e|
+        status::BadRequest(Some(e))
+    )?;
 
-    let source = path.ok_or_else(|| NotFound(String::from("Could not save file")))?;
-    let dest = file::get_new_image_file(&source, &algo_name)
-        .map_err(|e| NotFound(e.get_error_string()))?;
+    let dest = file::get_new_image_file(source.as_path(), &name)
+        .map_err(|e| status::BadRequest(Some(e.get_error_string())))?;
 
-    filter::run_algo(&source, &dest, algo).map_err(|e| NotFound(e.to_string()))?;
-    NamedFile::open(&dest).await.map_err(|e| NotFound(e.to_string()))
+    filter::run_algo(&source, &dest, algo).map_err(|e|
+        status::BadRequest(Some(e.to_string()))
+    )?;
+
+    NamedFile::open(&dest).await.map_err(|e|
+        status::BadRequest(Some(e.to_string()))
+    )
 }
 
 #[get("/")]

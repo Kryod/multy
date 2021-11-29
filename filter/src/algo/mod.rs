@@ -11,11 +11,28 @@ use std::path::Path;
 pub type Buffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
 
 pub enum Algorithms {
-    Blur,
-    Dilate,
-    Erode,
-    MedianBlur,
-    MinMax,
+    Blur(u32),
+    Dilate(u32),
+    Erode(u32),
+    MedianBlur(u32),
+    MinMax(u32),
+}
+
+impl Algorithms {
+    pub fn set_radius(&mut self, radius: u32) {
+        match self {
+            Self::Blur(r) |
+            Self::Dilate(r) |
+            Self::Erode(r) |
+            Self::MedianBlur(r) |
+            Self::MinMax(r) => *r = radius,
+        }
+    }
+
+    pub fn need_radius(&self) -> bool {
+        // matches!(self, Self::Blur(..), ..)
+        true
+    }
 }
 
 impl TryFrom<&str> for Algorithms {
@@ -23,26 +40,39 @@ impl TryFrom<&str> for Algorithms {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "dilate" => Ok(Self::Dilate),
-            "erode" => Ok(Self::Erode),
-            "median_blur" => Ok(Self::MedianBlur),
-            "min_max" => Ok(Self::MinMax),
-            "blur" => Ok(Self::Blur),
+            "blur" => Ok(Self::Blur(0)),
+            "dilate" => Ok(Self::Dilate(0)),
+            "erode" => Ok(Self::Erode(0)),
+            "median_blur" => Ok(Self::MedianBlur(0)),
+            "min_max" => Ok(Self::MinMax(0)),
             unknown => Err(format!("\"{}\" isn't a valid algorithm name.", unknown)),
         }
     }
 }
 
+impl std::fmt::Display for Algorithms {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let algo_name = match self {
+            Algorithms::Blur(_) => "blur",
+            Algorithms::Dilate(_) => "dilate",
+            Algorithms::Erode(_) => "erode",
+            Algorithms::MedianBlur(_) => "median blur",
+            Algorithms::MinMax(_) => "min max",
+        };
+
+        f.write_str(algo_name)
+    }
+}
+
 pub fn run_algo(source: &Path, dest: &Path, algo: Algorithms) -> Result<(), image::ImageError> {
     let img = image::open(source)?.into_rgba8();
-    let radius = 2;
 
     let buffer = match algo {
-        Algorithms::Blur => blur::blur(&img, radius),
-        Algorithms::Dilate => dilate::dilate(&img, radius),
-        Algorithms::Erode => erode::erode(&img, radius),
-        Algorithms::MedianBlur => median_blur::median_blur(&img, radius),
-        Algorithms::MinMax => min_max::min_max(&img, radius),
+        Algorithms::Blur(radius) => blur::blur(&img, radius),
+        Algorithms::Dilate(radius) => dilate::dilate(&img, radius),
+        Algorithms::Erode(radius) => erode::erode(&img, radius),
+        Algorithms::MedianBlur(radius) => median_blur::median_blur(&img, radius),
+        Algorithms::MinMax(radius) => min_max::min_max(&img, radius),
     };
 
     buffer.save(&dest)
