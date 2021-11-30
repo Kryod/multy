@@ -51,7 +51,7 @@ Store the `photo` on the server, without any other traitements.
 
 #### Return
 
-On success, status code 201, also known as `CREATED`, with the location on the saved image on the header `location`. Otherwise return status code 400, `BAD REQUEST`, with the error message in the body.
+On success, status code 201, also known as `CREATED`, with the path of the saved image on the header `location`. Otherwise return status code 400, `BAD REQUEST`, with the error message in the body.
 
 ## Help
 
