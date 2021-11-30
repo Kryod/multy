@@ -49,10 +49,9 @@ pub fn save_image(multipart_form_data: &mut MultipartFormData) -> Result<PathBuf
 
         let save_path = Path::new("static/images/").join(file_name);
 
-        match File::create(&save_path) {
-            Err(e) => return Err(format!("An Error occured while creating file: {}", e)),
-            Ok(_) => {},
-        };
+        if let Err(error) = File::create(&save_path) {
+            return Err(format!("An Error occured while creating file: {}", error));
+        }
 
         match fs::copy(path, &save_path) {
             Err(e) => Err(format!("An Error occured while saving file: {}", e)),

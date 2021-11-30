@@ -12,7 +12,7 @@ use rocket::http::ContentType;
 use rocket::fs::{FileServer, NamedFile};
 
 use rocket_dyn_templates::Template;
-use filter;
+
 
 #[get("/")]
 fn index() -> &'static str {

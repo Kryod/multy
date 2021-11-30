@@ -4,7 +4,7 @@ extern crate test;
 use test::Bencher;
 
 use std::{error::Error, path::PathBuf};
-use filter;
+
 
 const RADIUS: u32 = 2;
 const IMG: &str = "../static/images/lena.jpg";
