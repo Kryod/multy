@@ -23,13 +23,13 @@ Work in progress. no available features yet.
 
 Apply a specific algorithm on a provided image, then return the processed image.
 
-#### parameters
+#### Parameters
 
   - `algorithm`: among [filters](#filters-and-parameters), simply replace space by underscore
   - `radius`: provide the radius who should be used for the selected algorithm
   - `photo`: file field containing the target image
 
-#### return
+#### Return
 
 On success, status code 200, also known as `OK`, with the processed image in the body. Otherwise return status code 400, `BAD REQUEST`, with the error message in the body.
 
@@ -45,14 +45,14 @@ Load and display the requested `file_name`. Return status code 404, `NOT FOUND`,
 
 Store the `photo` on the server, without any other traitements.
 
-#### parameters
+#### Parameters
 
   - `photo`: file field containing the image to store
 
-#### return
+#### Return
 
 On success, status code 201, also known as `CREATED`, with the location on the saved image on the header `location`. Otherwise return status code 400, `BAD REQUEST`, with the error message in the body.
 
-## help
+## Help
 
-1. can be any image previously send or processed by the server
+1. Can be any image previously send or processed by the server.
