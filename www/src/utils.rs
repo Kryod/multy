@@ -22,7 +22,7 @@ pub async fn get_multipart_form_data(content_type: &ContentType, data: Data<'_>,
     let mut options = MultipartFormDataOptions::new();
 
     for field in fields {
-        let multipart: MultipartFormDataField = field.into();
+        let multipart = field.into();
         options.allowed_fields.push(multipart);
     }
 
@@ -64,8 +64,7 @@ pub fn save_image(multipart_form_data: &mut MultipartFormData) -> Result<PathBuf
 }
 
 pub fn get_algo(multipart_form_data: &mut MultipartFormData) -> Result<(Algorithms, String), String> {
-    let algorithm = multipart_form_data.texts.remove("algorithm");
-    let algorithm = match algorithm {
+    let algorithm = match multipart_form_data.texts.remove("algorithm") {
         None => Err(String::from("Missing \"algorithm\" field.")),
         Some(algo) => {
             if let Some(field) = algo.into_iter().next() {
@@ -75,11 +74,11 @@ pub fn get_algo(multipart_form_data: &mut MultipartFormData) -> Result<(Algorith
             }
         }
     }?;
+
     let mut algo = Algorithms::try_from(algorithm.as_str())?;
 
     if algo.need_radius() {
-        let radius = multipart_form_data.texts.remove("radius");
-        let radius = match radius {
+        let radius = match multipart_form_data.texts.remove("radius") {
             None => Err(format!("{}: missing \"radius\" field", algo)),
             Some(rad) => {
                 if let Some(field) = rad.into_iter().next() {

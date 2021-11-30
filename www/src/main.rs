@@ -26,12 +26,20 @@ async fn save(content_type: &ContentType, data: Data<'_>) -> Result<status::Crea
     ];
 
     let mut multipart_form_data = utils::get_multipart_form_data(content_type, data, fields).await;
-    match utils::save_image(&mut multipart_form_data) {
-        Err(str) => Err(status::BadRequest(Some(str))),
-        Ok(location) => Ok(status::Created::new(
-            location.to_str().unwrap().to_owned()
-        )),
-    }
+    let location = utils::save_image(&mut multipart_form_data).map_err(|e|
+        status::BadRequest(Some(e))
+    )?;
+
+    let url = "/public/";
+    let file = location
+        .file_name().unwrap()
+        .to_str().unwrap();
+
+    let mut location = String::with_capacity(url.len() + file.len());
+    location.push_str(url);
+    location.push_str(file);
+
+    Ok(status::Created::new(location))
 }
 
 #[post("/apply", data = "<data>")]

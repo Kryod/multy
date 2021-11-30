@@ -19,9 +19,9 @@ impl FilterError {
 
     // pub fn get_ref_error_string(&self) -> &'_ str {
     //     match self {
-    //         FilterError::DestImgError(ref s) |
-    //         FilterError::ImageError(ref s) |
-    //         FilterError::OtherError(ref s) => s,
+    //         FilterError::DestImg(s) |
+    //         FilterError::Image(s) |
+    //         FilterError::Other(s) => s,
     //     }
     // }
 }
