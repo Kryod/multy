@@ -38,18 +38,24 @@ pub fn blur(img: &Buffer, radius: u32) -> Buffer {
 
     for y in 0..height {
         let y_max = y.saturating_add(radius).min(height - 1);
-        let y_min = y.saturating_sub(radius + 1);
-        let y_len = y_max - y_min;
+        let (y_min, overflow_y) = match y.overflowing_sub(radius + 1) {
+            (_, true) => (u32::MIN, true),
+            sub => sub,
+        };
+        let y_len = y_max - y_min + overflow_y as u32;
 
         for x in 0..width {
             let x_mas = x.saturating_add(radius).min(width - 1);
-            let x_min = x.saturating_sub(radius + 1);
+            let (x_min, overflow_x) = match x.overflowing_sub(radius + 1) {
+                (_, true) => (u32::MIN, true),
+                sub => sub,
+            };
 
             let pix_max = sum_table[(x_mas + y_max * width) as usize];
-            let pix_min = sum_table[(x_min + y_min * width) as usize];
-            let pix_min_col = sum_table[(x_mas + y_min * width) as usize];
-            let pix_min_row = sum_table[(x_min + y_max * width) as usize];
-            let neighbours = (x_mas - x_min) * y_len;
+            let pix_min = if overflow_x || overflow_y { [0; 4] } else { sum_table[(x_min + y_min * width) as usize] };
+            let pix_min_col = if overflow_y { [0; 4] } else { sum_table[(x_mas + y_min * width) as usize]};
+            let pix_min_row = if overflow_x { [0; 4] } else { sum_table[(x_min + y_max * width) as usize]};
+            let neighbours = (x_mas - x_min + overflow_x as u32) * y_len;
 
             let sum = [
                 ((pix_max[0] + pix_min[0] - pix_min_col[0] - pix_min_row[0]) / neighbours) as u8,

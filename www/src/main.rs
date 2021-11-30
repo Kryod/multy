@@ -26,7 +26,7 @@ async fn save(content_type: &ContentType, data: Data<'_>) -> Result<status::Crea
     ];
 
     let mut multipart_form_data = utils::get_multipart_form_data(content_type, data, fields).await;
-    let location = utils::save_image(&mut multipart_form_data).map_err(|e|
+    let location = utils::save_image(&mut multipart_form_data, "photo").map_err(|e|
         status::BadRequest(Some(e))
     )?;
 
@@ -52,7 +52,7 @@ async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, 
     ];
 
     let mut multipart_form_data = utils::get_multipart_form_data(content_type, data, fields).await;
-    let source = utils::save_image(&mut multipart_form_data).map_err(|e|
+    let source = utils::save_image(&mut multipart_form_data, "photo").map_err(|e|
         status::BadRequest(Some(e))
     )?;
     let (algo, name) = utils::get_algo(&mut multipart_form_data).map_err(|e|
@@ -63,6 +63,37 @@ async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, 
         .map_err(|e| status::BadRequest(Some(e.get_error_string())))?;
 
     filter::run_algo(&source, &dest, algo).map_err(|e|
+        status::BadRequest(Some(e.to_string()))
+    )?;
+
+    NamedFile::open(&dest).await.map_err(|e|
+        status::BadRequest(Some(e.to_string()))
+    )
+}
+
+#[post("/compare", data = "<data>")]
+async fn compare(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, status::BadRequest<String>> {
+    let fields = vec![
+        utils::AllowedField::File("left"),
+        utils::AllowedField::File("right"),
+    ];
+
+    let mut multipart_form_data = utils::get_multipart_form_data(content_type, data, fields).await;
+    let left = utils::save_image(&mut multipart_form_data, "left").map_err(|e|
+        status::BadRequest(Some(e))
+    )?;
+    let right = utils::save_image(&mut multipart_form_data, "right").map_err(|e|
+        status::BadRequest(Some(e))
+    )?;
+
+    let dest = {
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let random_name: String = (0..15).map(|_| rng.sample(rand::distributions::Alphanumeric) as char).collect();
+        std::path::PathBuf::from(format!("static/images/{}.png", random_name))
+    };
+
+    filter::compare_images(&left, &right, &dest).map_err(|e|
         status::BadRequest(Some(e.to_string()))
     )?;
 
@@ -92,8 +123,8 @@ async fn main() -> Result<(), rocket::Error> {
     rocket::build()
         .mount("/public", FileServer::from("static/images"))
         .mount("/style", FileServer::from("static/style"))
+        .mount("/", routes![index, save, apply, compare])
         .mount("/public", routes![index_public])
-        .mount("/", routes![index, save, apply])
         .attach(Template::fairing())
         .launch()
         .await

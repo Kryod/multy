@@ -12,7 +12,7 @@ use rocket::{
     data::Data, http::ContentType,
 };
 use rand::{
-    self, Rng, distributions::Alphanumeric,
+    Rng, distributions::Alphanumeric,
 };
 use rocket_multipart_form_data::{
     MultipartFormDataOptions, MultipartFormData, MultipartFormDataField,
@@ -29,11 +29,11 @@ pub async fn get_multipart_form_data(content_type: &ContentType, data: Data<'_>,
     MultipartFormData::parse(content_type, data, options).await.unwrap()
 }
 
-pub fn save_image(multipart_form_data: &mut MultipartFormData) -> Result<PathBuf, String> {
-    if let Some(file_fields) = multipart_form_data.files.remove("photo") {
+pub fn save_image(multipart_form_data: &mut MultipartFormData, field: &str) -> Result<PathBuf, String> {
+    if let Some(file_fields) = multipart_form_data.files.remove(field) {
         let file_field = match file_fields.into_iter().next() {
             Some(field) => field,
-            None => return Err(String::from("missing element under \"photo\" field")),
+            None => return Err(format!("missing element under \"{}\" field", field)),
         };
 
         use rocket_multipart_form_data::FileField;
@@ -58,7 +58,7 @@ pub fn save_image(multipart_form_data: &mut MultipartFormData) -> Result<PathBuf
             Ok(_) => Ok(save_path),
         }
     } else {
-        Err(String::from("Missing \"photo\" field in form."))
+        Err(format!("Missing \"{}\" field in form.", field))
     }
 }
 

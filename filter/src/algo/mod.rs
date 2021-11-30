@@ -1,4 +1,5 @@
 pub mod median_blur;
+pub mod compare;
 pub mod min_max;
 pub mod dilate;
 pub mod erode;
@@ -76,6 +77,14 @@ pub fn run_algo(source: &Path, dest: &Path, algo: Algorithms) -> Result<(), imag
     };
 
     buffer.save(&dest)
+}
+
+pub fn compare_images(left: &Path, right: &Path, dest: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let left = image::open(left)?.into_rgba8();
+    let right = image::open(right)?.into_rgba8();
+
+    compare::compare(&left, &right)?.save(dest)?;
+    Ok(())
 }
 
 fn compute_buffer<T>(
