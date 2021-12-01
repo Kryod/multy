@@ -5,8 +5,8 @@ pub enum CompareError {
     MismatchSize,
 }
 
-const SAME: [u8; 4] = [0, 0, 0, 255];
-const DIFF: [u8; 4] = [190, 0, 0, 255];
+const SAME: image::Rgba<u8> = image::Rgba([0, 0, 0, 255]);
+const DIFF: image::Rgba<u8> = image::Rgba([190, 0, 0, 255]);
 
 pub fn compare(lhs: &Buffer, rhs: &Buffer) -> Result<Buffer, CompareError> {
     let dim = lhs.dimensions();
@@ -16,11 +16,7 @@ pub fn compare(lhs: &Buffer, rhs: &Buffer) -> Result<Buffer, CompareError> {
 
     let mut buffer = Buffer::new(dim.0, dim.1);
     buffer.pixels_mut().zip(lhs.pixels().zip(rhs.pixels())).for_each(|(buffer, (lhs, rhs))|
-        *buffer = if lhs == rhs {
-            image::Rgba(SAME)
-        } else {
-            image::Rgba(DIFF)
-        }
+        *buffer = if lhs == rhs { SAME } else { DIFF }
     );
 
     Ok(buffer)

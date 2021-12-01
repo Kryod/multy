@@ -5,8 +5,27 @@ fn global_test(source: &str, expected: &str, algo: fn(&Buffer, u32) -> Buffer) {
     let img = image::open(source).unwrap().into_rgba8();
     let computed = algo(&img, RADIUS);
 
-    let expected = image::open(expected).unwrap().into_rgba8();
-    assert!(computed.pixels().zip(expected.pixels()).all(|(lhs, rhs)| lhs == rhs))
+    let expected_img = image::open(expected).unwrap().into_rgba8();
+    // assert!(computed.pixels().zip(expected.pixels()).all(|(lhs, rhs)| lhs == rhs))
+    let mismatch = computed.pixels()
+        .zip(expected_img.pixels())
+        .filter(|(lhs, rhs)| lhs != rhs)
+        .count();
+
+    if mismatch > 0 {
+        let dest = "tests/error/";
+        let fname = std::path::Path::new(expected)
+        .file_name().unwrap()
+        .to_str().unwrap();
+
+        std::fs::create_dir_all(dest).unwrap();
+        let output = format!("{}{}", dest, fname);
+
+        filter::compare(&computed, &expected_img).unwrap()
+            .save(&output).unwrap();
+
+        panic!("test fail! found {} pixels differents. see {} for more details", mismatch, output);
+    }
 }
 
 #[test]
