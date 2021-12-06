@@ -7,6 +7,10 @@ Cargo.lock
 # macOS
 .DS_Store
 
+# tests error
+filter/tests/error
+
+# static computed files
 static/images/*blur*
 static/images/*erode*
 static/images/*dilate*

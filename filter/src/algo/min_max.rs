@@ -29,11 +29,12 @@ pub fn min_max(img: &Buffer, radius: u32) -> Buffer {
 
             let pix = img.get_pixel(x, y).0;
             let min_max = [
-                pix[0].clamp(min[0], max[0]),
-                pix[1].clamp(min[1], max[1]),
-                pix[2].clamp(min[2], max[2]),
-                pix[3].clamp(min[3], max[3]),
+                if pix[0] < min[0] { min[0] } else if pix[0] < max[0] { pix[0] } else { max[0] },
+                if pix[1] < min[1] { min[1] } else if pix[1] < max[1] { pix[1] } else { max[1] },
+                if pix[2] < min[2] { min[2] } else if pix[2] < max[2] { pix[2] } else { max[2] },
+                if pix[3] < min[3] { min[3] } else if pix[3] < max[3] { pix[3] } else { max[3] },
             ];
+
             buffer.put_pixel(x, y, image::Rgba(min_max));
         }
     }
