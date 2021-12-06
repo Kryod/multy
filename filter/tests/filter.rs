@@ -1,23 +1,21 @@
 use filter::Buffer;
-const RADIUS: u32 = 1;
 
 fn global_test(source: &str, expected: &str, algo: fn(&Buffer, u32) -> Buffer) {
-    let img = image::open(source).unwrap().into_rgba8();
-    let computed = algo(&img, RADIUS);
-
     let expected_img = image::open(expected).unwrap().into_rgba8();
-    // assert!(computed.pixels().zip(expected.pixels()).all(|(lhs, rhs)| lhs == rhs))
+    let img = image::open(source).unwrap().into_rgba8();
+    let computed = algo(&img, 1);
+
     let mismatch = computed.pixels()
         .zip(expected_img.pixels())
         .filter(|(lhs, rhs)| lhs != rhs)
         .count();
 
     if mismatch > 0 {
-        let dest = "tests/error/";
         let fname = std::path::Path::new(expected)
-        .file_name().unwrap()
-        .to_str().unwrap();
+            .file_name().unwrap()
+            .to_str().unwrap();
 
+        let dest = "tests/error/";
         std::fs::create_dir_all(dest).unwrap();
         let output = format!("{}{}", dest, fname);
 

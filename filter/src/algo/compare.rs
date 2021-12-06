@@ -15,9 +15,14 @@ pub fn compare(lhs: &Buffer, rhs: &Buffer) -> Result<Buffer, CompareError> {
     }
 
     let mut buffer = Buffer::new(dim.0, dim.1);
-    buffer.pixels_mut().zip(lhs.pixels().zip(rhs.pixels())).for_each(|(buffer, (lhs, rhs))|
-        *buffer = if lhs == rhs { SAME } else { DIFF }
-    );
+    buffer.pixels_mut()
+        .zip(
+            lhs.pixels()
+                .zip(rhs.pixels())
+        )
+        .for_each(|(buffer, (lhs, rhs))|
+            *buffer = if lhs == rhs { SAME } else { DIFF }
+        );
 
     Ok(buffer)
 }
