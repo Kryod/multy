@@ -47,7 +47,7 @@ async fn apply(content_type: &ContentType, data: Data<'_>) -> Result<NamedFile, 
     let fields = vec![
         utils::AllowedField::Text("algorithm"),
         utils::AllowedField::Text("radius"),
-        // utils::AllowedField::Text("factor"),
+        utils::AllowedField::Text("factor"),
         utils::AllowedField::File("photo"),
     ];
 
