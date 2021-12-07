@@ -91,6 +91,21 @@ pub fn get_algo(multipart_form_data: &mut MultipartFormData) -> Result<(Algorith
         algo.set_radius(radius);
     }
 
+    if algo.need_factor() {
+        let factor = match multipart_form_data.texts.remove("factor") {
+            None => Err(format!("{}: missing \"factor\" field", algo)),
+            Some(fac) => {
+                if let Some(field) = fac.into_iter().next() {
+                    field.text.parse::<f32>().map_err(|e| format!("{}: \"factor\" -> {}", algo, e))
+                } else {
+                    Err(format!("{}: missing value in \"factor\" field", algo))
+                }
+            }
+        }?;
+
+        algo.set_factor(factor);
+    }
+
     // Algorithm enum + original name
     // ex: (Algorithm::Blur(2), "blur")
     Ok((algo, algorithm))

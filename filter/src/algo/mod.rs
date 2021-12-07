@@ -1,3 +1,4 @@
+pub mod local_contrast;
 pub mod median_blur;
 pub mod compare;
 pub mod min_max;
@@ -15,6 +16,7 @@ pub enum Algorithms {
     Blur(u32),
     Dilate(u32),
     Erode(u32),
+    LocalContrast(u32, f32),
     MedianBlur(u32),
     MinMax(u32),
 }
@@ -25,14 +27,29 @@ impl Algorithms {
             Self::Blur(r) |
             Self::Dilate(r) |
             Self::Erode(r) |
+            Self::LocalContrast(r, _) |
             Self::MedianBlur(r) |
             Self::MinMax(r) => *r = radius,
         }
     }
 
+    pub fn set_factor(&mut self, factor: f32) {
+        if let Self::LocalContrast(_, f) = self {
+            *f = factor;
+        }
+
+        // match self {
+        //     Self::LocalContrast(_, f) => *f = factor,
+        //     _ => {}
+        // }
+    }
+
     pub fn need_radius(&self) -> bool {
-        // matches!(self, Self::Blur(..), ..)
         true
+    }
+
+    pub fn need_factor(&self) -> bool {
+        matches!(self, Self::LocalContrast(..))
     }
 }
 
@@ -44,6 +61,7 @@ impl TryFrom<&str> for Algorithms {
             "blur" => Ok(Self::Blur(0)),
             "dilate" => Ok(Self::Dilate(0)),
             "erode" => Ok(Self::Erode(0)),
+            "local_contrast" => Ok(Self::LocalContrast(0, 0.)),
             "median_blur" => Ok(Self::MedianBlur(0)),
             "min_max" => Ok(Self::MinMax(0)),
             unknown => Err(format!("\"{}\" isn't a valid algorithm name.", unknown)),
@@ -57,6 +75,7 @@ impl std::fmt::Display for Algorithms {
             Algorithms::Blur(_) => "blur",
             Algorithms::Dilate(_) => "dilate",
             Algorithms::Erode(_) => "erode",
+            Algorithms::LocalContrast(..) => "local contrast",
             Algorithms::MedianBlur(_) => "median blur",
             Algorithms::MinMax(_) => "min max",
         };
@@ -72,6 +91,7 @@ pub fn run_algo(source: &Path, dest: &Path, algo: Algorithms) -> Result<(), imag
         Algorithms::Blur(radius) => blur::blur(&img, radius),
         Algorithms::Dilate(radius) => dilate::dilate(&img, radius),
         Algorithms::Erode(radius) => erode::erode(&img, radius),
+        Algorithms::LocalContrast(radius, factor) => local_contrast::local_contrast(&img, radius, factor),
         Algorithms::MedianBlur(radius) => median_blur::median_blur(&img, radius),
         Algorithms::MinMax(radius) => min_max::min_max(&img, radius),
     };
