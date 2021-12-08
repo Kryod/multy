@@ -36,16 +36,6 @@ pub fn sub(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
 }
 
 #[inline]
-pub fn div(pix: [u32; 4], rhs: u32) -> [u32; 4] {
-    [
-        pix[0] / rhs,
-        pix[1] / rhs,
-        pix[2] / rhs,
-        pix[3] / rhs,
-    ]
-}
-
-#[inline]
 pub fn min(pix: &[u8; 4], min: &mut [u8; 4]) {
     min[0] = if min[0] < pix[0] { min[0] } else { pix[0] };
     min[1] = if min[1] < pix[1] { min[1] } else { pix[1] };
