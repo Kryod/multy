@@ -9,6 +9,13 @@ pub fn as_u32(pix: [u8; 4]) -> [u32; 4] {
 }
 
 #[inline]
+pub fn as_gray(pix: [u8; 4]) -> u8 {
+    pix[0] / 10 * 3 + // 0.299
+    pix[1] / 10 * 6 + // 0.587
+    pix[2] / 10       // 0.114
+}
+
+#[inline]
 pub fn add(lhs: [u32; 4], rhs: [u32; 4]) -> [u32; 4] {
     [
         lhs[0] + rhs[0],

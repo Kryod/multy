@@ -16,7 +16,7 @@ pub enum Algorithms {
     Blur(u32),
     Dilate(u32),
     Erode(u32),
-    LocalContrast(u32, f32),
+    LocalContrast(u32, i32),
     MedianBlur(u32),
     MinMax(u32),
 }
@@ -33,9 +33,7 @@ impl Algorithms {
         }
     }
 
-    pub fn set_factor(&mut self, factor: f32) {
-        if let Self::LocalContrast(_, f) = self {
-            *f = factor;
+    pub fn set_factor(&mut self, factor: i32) {
         }
 
         // match self {
@@ -61,7 +59,7 @@ impl TryFrom<&str> for Algorithms {
             "blur" => Ok(Self::Blur(0)),
             "dilate" => Ok(Self::Dilate(0)),
             "erode" => Ok(Self::Erode(0)),
-            "local_contrast" => Ok(Self::LocalContrast(0, 0.)),
+            "local_contrast" => Ok(Self::LocalContrast(0, 0)),
             "median_blur" => Ok(Self::MedianBlur(0)),
             "min_max" => Ok(Self::MinMax(0)),
             unknown => Err(format!("\"{}\" isn't a valid algorithm name.", unknown)),

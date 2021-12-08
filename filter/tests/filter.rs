@@ -48,7 +48,7 @@ fn erode() {
 #[test]
 fn local_contrast() {
     let (source, expected) = open_files("tests/images/noise.png", "tests/expected/local_contrast.png");
-    let computed = filter::local_contrast(&source, 32, 120.);
+    let computed = filter::local_contrast(&source, 32, 120);
     compare_buffer(computed, expected, "local_contrast.png");
 }
 
