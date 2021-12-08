@@ -96,7 +96,7 @@ pub fn get_algo(multipart_form_data: &mut MultipartFormData) -> Result<(Algorith
             None => Err(format!("{}: missing \"factor\" field", algo)),
             Some(fac) => {
                 if let Some(field) = fac.into_iter().next() {
-                    field.text.parse::<f32>().map_err(|e| format!("{}: \"factor\" -> {}", algo, e))
+                    field.text.parse::<i32>().map_err(|e| format!("{}: \"factor\" -> {}", algo, e))
                 } else {
                     Err(format!("{}: missing value in \"factor\" field", algo))
                 }

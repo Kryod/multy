@@ -1,4 +1,5 @@
 use super::Buffer;
+use crate::pixel;
 
 pub fn median_blur(img: &Buffer, radius: u32) -> Buffer {
     let (width, height) = img.dimensions();
@@ -18,7 +19,7 @@ pub fn median_blur(img: &Buffer, radius: u32) -> Buffer {
             for neighbour_y in y_min..y_max {
                 for neighbour_x in x_min..x_max {
                     let pix = img.get_pixel(neighbour_x, neighbour_y).0;
-                    let br = pix[0] / 3 + pix[1] / 3 + pix[2] / 3;
+                    let br = pixel::as_gray(pix);
 
                     container.push((br, pix));
                 }

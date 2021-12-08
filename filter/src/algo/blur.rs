@@ -57,14 +57,14 @@ pub fn blur(img: &Buffer, radius: u32) -> Buffer {
             let pix_min_row = if overflow_x { [0; 4] } else { sum_table[(x_min + y_max * width) as usize]};
             let neighbours = (x_mas - x_min + overflow_x as u32) * y_len;
 
-            let sum = [
+            let avg = [
                 ((pix_max[0] + pix_min[0] - pix_min_col[0] - pix_min_row[0]) / neighbours) as u8,
                 ((pix_max[1] + pix_min[1] - pix_min_col[1] - pix_min_row[1]) / neighbours) as u8,
                 ((pix_max[2] + pix_min[2] - pix_min_col[2] - pix_min_row[2]) / neighbours) as u8,
                 ((pix_max[3] + pix_min[3] - pix_min_col[3] - pix_min_row[3]) / neighbours) as u8,
             ];
 
-            buffer.put_pixel(x, y, image::Rgba(sum))
+            buffer.put_pixel(x, y, image::Rgba(avg))
         }
     }
 
