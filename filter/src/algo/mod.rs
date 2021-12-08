@@ -34,6 +34,8 @@ impl Algorithms {
     }
 
     pub fn set_factor(&mut self, factor: i32) {
+        if let Self::LocalContrast(_, f) = self {
+            *f = factor;
         }
 
         // match self {
