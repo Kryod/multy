@@ -25,6 +25,13 @@ fn compare_buffer(computed: Buffer, expected: Buffer, err_output: &str) {
 }
 
 #[test]
+fn adaptive_threshold() {
+    let (source, expected) = open_files("tests/images/chess.png", "tests/expected/adaptive_threshold.png");
+    let computed = filter::adaptive_threshold(&source, 1, 0);
+    compare_buffer(computed, expected, "adaptive_threshold.png");
+}
+
+#[test]
 fn blur() {
     let (source, expected) = open_files("tests/images/grid.png", "tests/expected/blur.png");
     let computed = filter::blur(&source, 1);

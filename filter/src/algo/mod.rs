@@ -1,3 +1,4 @@
+pub mod adaptive_threshold;
 pub mod local_contrast;
 pub mod median_blur;
 pub mod compare;
@@ -13,6 +14,7 @@ use std::path::Path;
 pub type Buffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
 
 pub enum Algorithms {
+    AdaptiveThreshold(u32, i32),
     Blur(u32),
     Dilate(u32),
     Erode(u32),
@@ -24,6 +26,7 @@ pub enum Algorithms {
 impl Algorithms {
     pub fn set_radius(&mut self, radius: u32) {
         match self {
+            Self::AdaptiveThreshold(r, _) |
             Self::Blur(r) |
             Self::Dilate(r) |
             Self::Erode(r) |
@@ -34,14 +37,11 @@ impl Algorithms {
     }
 
     pub fn set_factor(&mut self, factor: i32) {
-        if let Self::LocalContrast(_, f) = self {
-            *f = factor;
+        match self {
+            Self::AdaptiveThreshold(_, f) |
+            Self::LocalContrast(_, f) => *f = factor,
+            _ => {}
         }
-
-        // match self {
-        //     Self::LocalContrast(_, f) => *f = factor,
-        //     _ => {}
-        // }
     }
 
     pub fn need_radius(&self) -> bool {
@@ -49,7 +49,7 @@ impl Algorithms {
     }
 
     pub fn need_factor(&self) -> bool {
-        matches!(self, Self::LocalContrast(..))
+        matches!(self, Self::AdaptiveThreshold(..) | Self::LocalContrast(..))
     }
 }
 
@@ -58,6 +58,7 @@ impl TryFrom<&str> for Algorithms {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
+            "adaptive_threshold" => Ok(Self::AdaptiveThreshold(0, 0)),
             "blur" => Ok(Self::Blur(0)),
             "dilate" => Ok(Self::Dilate(0)),
             "erode" => Ok(Self::Erode(0)),
@@ -72,6 +73,7 @@ impl TryFrom<&str> for Algorithms {
 impl std::fmt::Display for Algorithms {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let algo_name = match self {
+            Algorithms::AdaptiveThreshold(..) => "adaptive threshold",
             Algorithms::Blur(_) => "blur",
             Algorithms::Dilate(_) => "dilate",
             Algorithms::Erode(_) => "erode",
@@ -88,6 +90,7 @@ pub fn run_algo(source: &Path, dest: &Path, algo: Algorithms) -> Result<(), imag
     let img = image::open(source)?.into_rgba8();
 
     let buffer = match algo {
+        Algorithms::AdaptiveThreshold(radius, f) => adaptive_threshold::adaptive_threshold(&img, radius, f),
         Algorithms::Blur(radius) => blur::blur(&img, radius),
         Algorithms::Dilate(radius) => dilate::dilate(&img, radius),
         Algorithms::Erode(radius) => erode::erode(&img, radius),

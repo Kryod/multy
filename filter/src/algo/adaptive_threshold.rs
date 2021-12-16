@@ -1,7 +1,7 @@
 use super::Buffer;
 use crate::pixel;
 
-pub fn local_contrast(img: &Buffer, radius: u32, factor: i32) -> Buffer {
+pub fn adaptive_threshold(img: &Buffer, radius: u32, f: i32) -> Buffer {
     let (width, height) = img.dimensions();
     let mut sum_table = vec![[0; 4]; (width * height) as usize];
 
@@ -58,28 +58,52 @@ pub fn local_contrast(img: &Buffer, radius: u32, factor: i32) -> Buffer {
             let neighbours = (x_max - x_min + overflow_x as u32) * y_len;
 
             let pix = img.get_pixel(x, y).0;
-            let avg = [
-                ((pix_max[0] + pix_min[0] - pix_min_col[0] - pix_min_row[0]) / neighbours) as i32,
-                ((pix_max[1] + pix_min[1] - pix_min_col[1] - pix_min_row[1]) / neighbours) as i32,
-                ((pix_max[2] + pix_min[2] - pix_min_col[2] - pix_min_row[2]) / neighbours) as i32,
-                ((pix_max[3] + pix_min[3] - pix_min_col[3] - pix_min_row[3]) / neighbours) as i32,
-            ];
+            let gray_pix = pixel::as_gray(pix);
 
-            let contrast = [
-                (pix[0] as i32 - avg[0]) * factor,
-                (pix[1] as i32 - avg[1]) * factor,
-                (pix[2] as i32 - avg[2]) * factor,
-                (pix[3] as i32 - avg[3]) * factor,
+            let threshold = [
+                ((pix_max[0] + pix_min[0] - pix_min_col[0] - pix_min_row[0]) / neighbours) as u8,
+                ((pix_max[1] + pix_min[1] - pix_min_col[1] - pix_min_row[1]) / neighbours) as u8,
+                ((pix_max[2] + pix_min[2] - pix_min_col[2] - pix_min_row[2]) / neighbours) as u8,
+                0
             ];
+            let threshold = (pixel::as_gray(threshold) as i32 + f).clamp(0, 255) as u8;
 
-            buffer.put_pixel(x, y, image::Rgba([
-                (pix[0] as i32 + contrast[0]).clamp(0, 255) as u8,
-                (pix[1] as i32 + contrast[1]).clamp(0, 255) as u8,
-                (pix[2] as i32 + contrast[2]).clamp(0, 255) as u8,
-                (pix[3] as i32 + contrast[3]).clamp(0, 255) as u8,
-            ]));
+            let new_pix = image::Rgba(
+                if gray_pix > threshold { pix } else { [0, 0, 0, 255] }
+                // if gray_pix > threshold { [255; 4] } else { [0, 0, 0, 255] }
+            );
+
+            buffer.put_pixel(x, y, new_pix);
         }
     }
 
     buffer
 }
+
+/*
+def adaptive_threshold(im, radius, f):
+    copy = im.copy()
+    data1 = im.load()
+    data2 = copy.load()
+    size = copy.size
+
+    for y in range(size[1]):
+        for x in range(size[0]):
+            ecart = 0
+            nb = 0
+
+            for y_ in range(y - radius, y + radius + 1):
+                if y_ < 0 or y_ >= size[1]:
+                    continue
+
+                for x_ in range(x - radius, x + radius + 1):
+                    if x_ < 0 or x_ >= size[0]:
+                        continue
+
+                    ecart += data1[x_, y_]
+                    nb += 1
+
+            data2[x, y] = 255 if data1[x, y] > int(ecart / nb) + f else 0
+
+    return copy
+*/

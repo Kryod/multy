@@ -11,6 +11,15 @@ const FACTOR: i32 = 5;
 const IMG: &str = "../static/images/lena.jpg";
 
 #[bench]
+fn adaptive_threshold(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
+    let path = PathBuf::from(IMG);
+    let img = image::open(path)?.into_rgba8();
+
+    b.iter(|| filter::adaptive_threshold(&img, RADIUS, FACTOR));
+    Ok(())
+}
+
+#[bench]
 fn blur(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
     let path = PathBuf::from(IMG);
     let img = image::open(path)?.into_rgba8();
