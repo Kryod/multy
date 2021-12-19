@@ -90,7 +90,7 @@ pub fn run_algo(source: &Path, dest: &Path, algo: Algorithms) -> Result<(), imag
     let img = image::open(source)?.into_rgba8();
 
     let buffer = match algo {
-        Algorithms::AdaptiveThreshold(radius, f) => adaptive_threshold::adaptive_threshold(&img, radius, f),
+        Algorithms::AdaptiveThreshold(radius, f) => adaptive_threshold::adaptive_threshold(&img, radius as usize, f),
         Algorithms::Blur(radius) => blur::blur(&img, radius),
         Algorithms::Dilate(radius) => dilate::dilate(&img, radius),
         Algorithms::Erode(radius) => erode::erode(&img, radius),
