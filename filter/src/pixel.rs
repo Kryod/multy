@@ -39,7 +39,7 @@ impl<T> Pixel<T> where T:
     std::ops::Add<Output = T> +
     From<u8>
 {
-    pub fn as_gray(self) -> T {
+    pub fn gray_color(self) -> T {
         let [r, g, b, _] = self.0;
 
         r / 10.into() * 3.into() + // 0.299

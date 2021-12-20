@@ -46,9 +46,9 @@ pub fn adaptive_threshold(img: &RgbaImage, radius: usize, f: i32) -> RgbaImage {
             let neighbours = ((x_max - x_min + overflow_x as usize) * y_len) as i32;
 
             let pix = img.get_pixel(x as u32, y as u32).0;
-            let gray_pix = Pixel::new(pix).as_gray();
+            let gray_pix = Pixel::new(pix).gray_color();
 
-            let threshold = ((pix_max + pix_min - pix_min_col - pix_min_row) / neighbours).as_gray();
+            let threshold = ((pix_max + pix_min - pix_min_col - pix_min_row) / neighbours).gray_color();
             let threshold = (threshold + f).clamp(0, 255) as u8;
 
             let new_pix = image::Rgba(if gray_pix > threshold { pix } else { [0, 0, 0, 255] });

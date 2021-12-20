@@ -19,7 +19,7 @@ pub fn median_blur(img: &RgbaImage, radius: u32) -> RgbaImage {
             for neighbour_y in y_min..y_max {
                 for neighbour_x in x_min..x_max {
                     let pix = img.get_pixel(neighbour_x, neighbour_y).0;
-                    let br = Pixel::new(pix).as_gray();
+                    let br = Pixel::new(pix).gray_color();
 
                     container.push((br, pix));
                 }
