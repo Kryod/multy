@@ -1,7 +1,7 @@
-use super::Buffer;
+use super::RgbaImage;
 use crate::pixel;
 
-pub fn adaptive_threshold(img: &Buffer, radius: usize, f: i32) -> Buffer {
+pub fn adaptive_threshold(img: &RgbaImage, radius: usize, f: i32) -> RgbaImage {
     let (width, height) = img.dimensions();
     let (width, height) = (width as usize, height as usize);
     let mut sum_table = vec![[0; 4]; width * height];
@@ -35,7 +35,7 @@ pub fn adaptive_threshold(img: &Buffer, radius: usize, f: i32) -> Buffer {
         }
     }
 
-    let mut buffer = Buffer::new(width as u32, height as u32);
+    let mut buffer = RgbaImage::new(width as u32, height as u32);
 
     for y in 0..height {
         let y_max = y.saturating_add(radius).min(height - 1);

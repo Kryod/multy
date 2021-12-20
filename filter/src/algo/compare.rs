@@ -1,4 +1,4 @@
-use super::Buffer;
+use super::RgbaImage;
 
 #[derive(Debug)]
 pub enum CompareError {
@@ -8,13 +8,13 @@ pub enum CompareError {
 const SAME: image::Rgba<u8> = image::Rgba([0, 0, 0, 255]);
 const DIFF: image::Rgba<u8> = image::Rgba([190, 0, 0, 255]);
 
-pub fn compare(lhs: &Buffer, rhs: &Buffer) -> Result<Buffer, CompareError> {
+pub fn compare(lhs: &RgbaImage, rhs: &RgbaImage) -> Result<RgbaImage, CompareError> {
     let dim = lhs.dimensions();
     if dim != rhs.dimensions() {
         return Err(CompareError::MismatchSize);
     }
 
-    let mut buffer = Buffer::new(dim.0, dim.1);
+    let mut buffer = RgbaImage::new(dim.0, dim.1);
     buffer.pixels_mut()
         .zip(
             lhs.pixels()

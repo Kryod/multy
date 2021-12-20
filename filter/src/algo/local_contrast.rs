@@ -1,7 +1,7 @@
-use super::Buffer;
+use super::RgbaImage;
 use crate::pixel;
 
-pub fn local_contrast(img: &Buffer, radius: u32, factor: i32) -> Buffer {
+pub fn local_contrast(img: &RgbaImage, radius: u32, factor: i32) -> RgbaImage {
     let (width, height) = img.dimensions();
     let mut sum_table = vec![[0; 4]; (width * height) as usize];
 
@@ -34,7 +34,7 @@ pub fn local_contrast(img: &Buffer, radius: u32, factor: i32) -> Buffer {
         }
     }
 
-    let mut buffer = Buffer::new(width, height);
+    let mut buffer = RgbaImage::new(width, height);
 
     for y in 0..height {
         let y_max = y.saturating_add(radius).min(height - 1);

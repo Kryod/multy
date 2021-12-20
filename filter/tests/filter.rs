@@ -1,12 +1,12 @@
-use filter::Buffer;
+use filter::RgbaImage;
 
-fn open_files(source: &str, expected: &str) -> (Buffer, Buffer) {
+fn open_files(source: &str, expected: &str) -> (RgbaImage, RgbaImage) {
     let expected = image::open(expected).unwrap().into_rgba8();
     let source = image::open(source).unwrap().into_rgba8();
     (source, expected)
 }
 
-fn compare_buffer(computed: Buffer, expected: Buffer, err_output: &str) {
+fn compare_buffer(computed: RgbaImage, expected: RgbaImage, err_output: &str) {
     let mismatch = computed.pixels()
         .zip(expected.pixels())
         .filter(|(lhs, rhs)| lhs != rhs)

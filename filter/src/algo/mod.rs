@@ -7,11 +7,10 @@ pub mod dilate;
 pub mod erode;
 pub mod blur;
 
-use image::{ImageBuffer, Rgba};
 use std::convert::TryFrom;
 use std::path::Path;
 
-pub type Buffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
+pub use image::RgbaImage;
 
 pub enum Algorithms {
     AdaptiveThreshold(u32, i32),
@@ -111,16 +110,16 @@ pub fn compare_images(left: &Path, right: &Path, dest: &Path) -> Result<(), Box<
 }
 
 fn compute_buffer<T>(
-    img: &Buffer,
+    img: &RgbaImage,
     radius: u32,
     accumulator: T,
     reduce: fn(&[u8; 4], &mut T),
     concat: fn(&T, &mut T),
     average: fn(T, u32) -> [u8; 4],
-) -> Buffer where T: Clone {
+) -> RgbaImage where T: Clone {
     let width = img.width();
     let height = img.height();
-    let mut buffer = image::ImageBuffer::new(width, height);
+    let mut buffer = RgbaImage::new(width, height);
     let mut partial_blur = std::collections::VecDeque::with_capacity(radius as usize * 2 + 2);
 
     for y in 0..height {

@@ -1,9 +1,9 @@
-use super::Buffer;
+use super::RgbaImage;
 use crate::pixel;
 
-pub fn min_max(img: &Buffer, radius: u32) -> Buffer {
+pub fn min_max(img: &RgbaImage, radius: u32) -> RgbaImage {
     let (width, height) = img.dimensions();
-    let mut buffer = Buffer::new(width, height);
+    let mut buffer = RgbaImage::new(width, height);
 
     for y in 0..height {
         let y_max = y.saturating_add(radius + 1).min(height);
