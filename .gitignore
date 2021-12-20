@@ -17,3 +17,4 @@ static/images/*dilate*
 static/images/*min_max*
 static/images/*median_blur*
 static/images/*local_contrast*
+static/images/*adaptive_threshold*

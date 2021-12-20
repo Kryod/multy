@@ -1,12 +1,12 @@
-use filter::Buffer;
+use filter::RgbaImage;
 
-fn open_files(source: &str, expected: &str) -> (Buffer, Buffer) {
+fn open_files(source: &str, expected: &str) -> (RgbaImage, RgbaImage) {
     let expected = image::open(expected).unwrap().into_rgba8();
     let source = image::open(source).unwrap().into_rgba8();
     (source, expected)
 }
 
-fn compare_buffer(computed: Buffer, expected: Buffer, err_output: &str) {
+fn compare_buffer(computed: RgbaImage, expected: RgbaImage, err_output: &str) {
     let mismatch = computed.pixels()
         .zip(expected.pixels())
         .filter(|(lhs, rhs)| lhs != rhs)
@@ -22,6 +22,13 @@ fn compare_buffer(computed: Buffer, expected: Buffer, err_output: &str) {
 
         panic!("test fail! found {} pixels differents. see {} for more details", mismatch, output);
     }
+}
+
+#[test]
+fn adaptive_threshold() {
+    let (source, expected) = open_files("tests/images/chess.png", "tests/expected/adaptive_threshold.png");
+    let computed = filter::adaptive_threshold(&source, 1, 0);
+    compare_buffer(computed, expected, "adaptive_threshold.png");
 }
 
 #[test]

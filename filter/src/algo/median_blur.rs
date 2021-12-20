@@ -1,11 +1,11 @@
-use super::Buffer;
-use crate::pixel;
+use crate::pixel::Pixel;
+use super::RgbaImage;
 
-pub fn median_blur(img: &Buffer, radius: u32) -> Buffer {
+pub fn median_blur(img: &RgbaImage, radius: u32) -> RgbaImage {
     let (width, height) = img.dimensions();
     let capacity = (radius * 2 + 1).pow(2) as usize;
     let mut container = Vec::with_capacity(capacity);
-    let mut buffer = Buffer::new(width, height);
+    let mut buffer = RgbaImage::new(width, height);
 
     for y in 0..height {
         let y_max = y.saturating_add(radius + 1).min(height);
@@ -19,7 +19,7 @@ pub fn median_blur(img: &Buffer, radius: u32) -> Buffer {
             for neighbour_y in y_min..y_max {
                 for neighbour_x in x_min..x_max {
                     let pix = img.get_pixel(neighbour_x, neighbour_y).0;
-                    let br = pixel::as_gray(pix);
+                    let br = Pixel::new(pix).gray_color();
 
                     container.push((br, pix));
                 }

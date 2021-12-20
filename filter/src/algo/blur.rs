@@ -1,40 +1,28 @@
-use super::Buffer;
-use crate::pixel;
+use crate::pixel::Pixel;
+use super::RgbaImage;
 
-pub fn blur(img: &Buffer, radius: u32) -> Buffer {
+pub fn blur(img: &RgbaImage, radius: u32) -> RgbaImage {
     let (width, height) = img.dimensions();
-    let mut sum_table = vec![[0; 4]; (width * height) as usize];
+    let (uwidth, uheight) = (width as usize, height as usize);
+    let mut sum_table = vec![Pixel::default(); (width * height) as usize];
 
-    sum_table[0] = pixel::as_u32(img.get_pixel(0, 0).0);
-    for x in 1..width {
-        sum_table[x as usize] = pixel::add(
-            sum_table[x as usize - 1],
-            pixel::as_u32(img.get_pixel(x, 0).0)
-        );
+    sum_table[0] = Pixel::new(img.get_pixel(0, 0).0).into::<u32>();
+    for x in 1..uwidth {
+        let next_pix = Pixel::new(img.get_pixel(x as u32, 0).0).into();
+        sum_table[x] = sum_table[x - 1] + next_pix;
     }
-    for y in 1..height {
-        sum_table[(y * width) as usize] = pixel::add(
-            sum_table[((y - 1) * width) as usize],
-            pixel::as_u32(img.get_pixel(0, y).0)
-        );
+    for y in 1..uheight {
+        let next_pix = Pixel::new(img.get_pixel(0, y as u32).0).into();
+        sum_table[y * uwidth] = sum_table[(y - 1) * uwidth] + next_pix;
     }
-    for y in 1..height {
-        for x in 1..width {
-            // sum[x,y] = sum[x-1,y] + sum[x,y-1] - sum[x-1,y-1] + img[x,y]
-            sum_table[(x + y * width) as usize] = pixel::add(
-                pixel::sub(
-                    pixel::add(
-                        sum_table[(x - 1 + y * width) as usize],
-                        sum_table[(x + (y - 1) * width) as usize]
-                    ),
-                    sum_table[(x - 1 + (y - 1) * width) as usize]
-                ),
-                pixel::as_u32(img.get_pixel(x, y).0)
-            );
+    for y in 1..uheight {
+        for x in 1..uwidth {
+            let next_pix = Pixel::new(img.get_pixel(x as u32, y as u32).0).into();
+            sum_table[x + y * uwidth] = sum_table[x - 1 + y * uwidth] + sum_table[x + (y - 1) * uwidth] - sum_table[x - 1 + (y - 1) * uwidth] + next_pix;
         }
     }
 
-    let mut buffer = Buffer::new(width, height);
+    let mut buffer = RgbaImage::new(width, height);
 
     for y in 0..height {
         let y_max = y.saturating_add(radius).min(height - 1);
@@ -45,26 +33,22 @@ pub fn blur(img: &Buffer, radius: u32) -> Buffer {
         let y_len = y_max - y_min + overflow_y as u32;
 
         for x in 0..width {
-            let x_mas = x.saturating_add(radius).min(width - 1);
+            let x_max = x.saturating_add(radius).min(width - 1);
             let (x_min, overflow_x) = match x.overflowing_sub(radius + 1) {
                 (_, true) => (u32::MIN, true),
                 sub => sub,
             };
 
-            let pix_max = sum_table[(x_mas + y_max * width) as usize];
-            let pix_min = if overflow_x || overflow_y { [0; 4] } else { sum_table[(x_min + y_min * width) as usize] };
-            let pix_min_col = if overflow_y { [0; 4] } else { sum_table[(x_mas + y_min * width) as usize]};
-            let pix_min_row = if overflow_x { [0; 4] } else { sum_table[(x_min + y_max * width) as usize]};
-            let neighbours = (x_mas - x_min + overflow_x as u32) * y_len;
+            let pix_max = sum_table[(x_max + y_max * width) as usize];
+            let pix_min = if overflow_x || overflow_y { Pixel::default() } else { sum_table[(x_min + y_min * width) as usize] };
+            let pix_min_col = if overflow_y { Pixel::default() } else { sum_table[(x_max + y_min * width) as usize]};
+            let pix_min_row = if overflow_x { Pixel::default() } else { sum_table[(x_min + y_max * width) as usize]};
+            let neighbours = (x_max - x_min + overflow_x as u32) * y_len;
 
-            let avg = [
-                ((pix_max[0] + pix_min[0] - pix_min_col[0] - pix_min_row[0]) / neighbours) as u8,
-                ((pix_max[1] + pix_min[1] - pix_min_col[1] - pix_min_row[1]) / neighbours) as u8,
-                ((pix_max[2] + pix_min[2] - pix_min_col[2] - pix_min_row[2]) / neighbours) as u8,
-                ((pix_max[3] + pix_min[3] - pix_min_col[3] - pix_min_row[3]) / neighbours) as u8,
-            ];
+            let avg = (pix_max + pix_min - pix_min_col - pix_min_row) / neighbours;
+            let avg = avg.into();
 
-            buffer.put_pixel(x, y, image::Rgba(avg))
+            buffer.put_pixel(x, y, image::Rgba(avg.0))
         }
     }
 
