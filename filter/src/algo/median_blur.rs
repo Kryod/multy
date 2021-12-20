@@ -1,5 +1,5 @@
+use crate::pixel::Pixel;
 use super::RgbaImage;
-use crate::pixel;
 
 pub fn median_blur(img: &RgbaImage, radius: u32) -> RgbaImage {
     let (width, height) = img.dimensions();
@@ -19,7 +19,7 @@ pub fn median_blur(img: &RgbaImage, radius: u32) -> RgbaImage {
             for neighbour_y in y_min..y_max {
                 for neighbour_x in x_min..x_max {
                     let pix = img.get_pixel(neighbour_x, neighbour_y).0;
-                    let br = pixel::as_gray(pix);
+                    let br = Pixel::new(pix).as_gray();
 
                     container.push((br, pix));
                 }
